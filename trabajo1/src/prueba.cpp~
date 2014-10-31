@@ -1,0 +1,22 @@
+#include <cmath>
+#include <iostream>
+#include <opencv2/opencv.hpp>
+#include <cstdlib>
+
+using namespace cv;
+using namespace std;
+
+void pintaI(Mat im)
+{
+	namedWindow("Imagen",1);
+	imshow("Imagen",im);
+	waitKey(0);
+	destroyWindow("Imagen");
+}
+
+void pintaMI(vector<Mat> m)
+{
+	
+}
+
+int main(int argc, char* argv[])
