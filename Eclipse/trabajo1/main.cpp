@@ -64,16 +64,13 @@ double gaussValue(int x, double sigma)
 	return exp(-0.5*((x*x)/(sigma*sigma)));
 }
 
-/**
- * EDITAR
- */
 Mat gaussMask(int size, double sigma)
 {
 	vector <double> vMask (size);
 	double normal = 0.0;
-	for (int i = 0; i <= ((size/2)); i++)
+	for (int i = 0; i <= size/2; i++)
 	{
-		normal += vMask[((size/2)-i)] = vMask[((size/2)+i)] = gaussValue(i ,sigma);
+		normal += vMask[(size/2)-i] = vMask[(size/2)+i] = gaussValue(i ,sigma);
 	}
 	normal = 1.0 / (normal * 2 - gaussValue(0, sigma));
 	Mat mask(vMask, true);
@@ -81,153 +78,89 @@ Mat gaussMask(int size, double sigma)
 	return mask;
 }
 
-double convolSignal1DMask(Mat &signal, Mat mask)
+Vec3d convolVectorMask(Mat &signal, Mat &mask)
 {
-	/*Vec3d v;
-	if(signal.type() == 0)
+	Vec3d v;
+	vector<Mat> channels;
+	split(signal, channels);
+	Mat m(1, channels[0].cols, channels[0].type());
+	Mat c;
+	for(int i=0; i<signal.channels(); i++)
 	{
-		//v = signal.mul(mask);
-		Mat a = signal*mask;
-		//return a[0,0];
-		return a[a.rows/2, a.cols/2];
-		a.at
-		//return (Mat(signal * mask))[signal.rows/2, mask.cols/2];
+		c = channels[i];
+		for(int j=0; j<c.cols; j++)
+		{
+			m.col(j) = c.col(j).dot(mask);
+		}
+		v[i] = m.dot(mask.t());
 	}
-	else
+
+	/*for (int i = 0; i < channels[0].cols; i++)
 	{
-		vector<Mat> channels;
-		split(signal, channels);
-		for(unsigned int i=0; i<channels.size(); i++)
-			v[i] = channels[i].dot(mask);
-		//merge(v, signal);
-		return 0;
-	}*/
+		for(int j=0; j < channels[0].rows; j++)
+		{
+			v[0] += channels[0].at<double>(i,j) * mask.at<double>(i, 0);
+		}
+	}
+	v[i] = m.dot(mask.t());*/
+
+	return v;
 }
 
-Mat makeBorders(Mat & src, Mat & mask, int modo){
-	//Creamos una matriz auxliar para trabajar comodamente
-	Mat aux (1,1,src.type());
-	//Si modo es igual a cero crearemos los bordes a partir de una constante: 0 tambien, es decir bordes negros
-	if(modo == 0){
-		//Creamos los bordes laterales con el alto de la imagen original y el ancho de la mitad del tamaño de la mascara
-		Mat borders(src.rows,(mask.rows/2), src.type(), 0.0);
-
-		//Pegamos los bordes nuevos por la derecha y por la izquierda
-		hconcat(borders, src, aux);
-		hconcat(aux, borders, aux);
-
-		//Redimensionamos la matriz de bordes para poder pegarla arriba y abajo
-		//Tomaremos el ancho de la imagen original + los bordes pegados anteriormente y el alto de la mitad del tamaño de la mascara
-		borders = borders.zeros((mask.rows/2), aux.cols, src.type());
-
-		//Pegamos los bordes por arriba y por abajo
-		vconcat(borders, aux, aux);
-		vconcat(aux, borders, aux);
-
-	}
-	else{ //En caso de que modo sea distinto de cero crearemos los bordes reflejando los pixels de la imagen original
-		Mat borders(src.rows,(mask.rows/2), src.type(),2.0);
-
-		//Partiendo la parte izquierda de la matriz tomamos los valores pertinentes de la imagen
-		for (int i = 0; i < borders.rows; i++){
-			for (int j = 0; j < borders.cols; j++){
-				borders.at <Vec3b> (i,j) = src.at <Vec3b> (i, ((borders.cols-1)-j));
-			}
-		}
-		//Pegamos el borde por la izquierda
-		hconcat(borders, src, aux);
-
-		//Partiendo la parte derecha de la matriz tomamos los valores pertinentes de la imagen
-		for (int i = 0; i < borders.rows; i++){
-			for (int j = 0; j < borders.cols; j++){
-				borders.at <Vec3b> (i,j) = src.at <Vec3b> (i, ((src.cols-1)-j));
-			}
-		}
-		//PEgamos el borde por la derecha
-		hconcat(aux, borders, aux);
-
-		//Redimensionamos la matriz de bordes para que se ajuste por arriba
-		borders = borders.zeros((mask.rows/2), aux.cols, src.type());
-
-		//Partiendo la parte superior de la matriz tomamos los valores pertinentes de la imagen
-		for (int i = 0; i < borders.rows; i++){
-			for (int j = 0; j < borders.cols; j++){
-				borders.at <Vec3b> ((i),j) = aux.at <Vec3b> (((borders.rows-1)-i), j);
-			}
-		}
-		//Pegamos el borde por arriba
-		vconcat(borders, aux, aux);
-
-		//Partiendo la parte inferior de la matriz tomamos los valores pertinentes de la imagen
-		for (int i = 0; i < borders.rows; i++){
-			for (int j = 0; j < borders.cols; j++){
-				borders.at <Vec3b> (i,j) = aux.at <Vec3b> (((aux.rows-1)-i), j);
-			}
-		}
-		//Pegamos el borde por abajo
-		vconcat(aux, borders, aux);
-	}
-
-	return aux;
+Mat setEdges(Mat src, Mat & mask)
+{
+	Mat bh(src.rows, mask.rows/2, src.type(), 0.0);
+	hconcat(bh, src, src);
+	hconcat(src, bh, src);
+	Mat bv(mask.rows/2, src.cols, src.type(), 0.0);
+	vconcat(bv, src, src);
+	vconcat(src, bv, src);
+	return src;
 }
 
-/*Mat filterGauss(Mat &im, Mat &mask, int contorno = 0)
+Mat filterGauss(Mat src, Mat &mask)
 {
-	Mat imGauss = Mat(im.rows, im.cols, CV_64FC3);
-
-
-	return imGauss;
-}*/
-
-Mat filterGauss(Mat &src, Mat &mask, int modo)
-{
-	/*if(src.type() == 0)
-	 {
-	 cvtColor(src, src, CV_GRAY2BGR, 3);
-	 }*/
-	Mat bordes = makeBorders(src, mask, modo);
-
-	bordes.convertTo(bordes, CV_64F);
-
-	Mat modificada(src.rows, src.cols, CV_64FC3);
+	src.convertTo(src, CV_64F);
 	Mat aux;
-
-	for (int i = 0; i < (modificada.cols); i++)
+	Mat b = setEdges(src, mask);
+	for (int i = 0; i < src.cols; i++)
 	{
-		for (int j = 0; j < (modificada.rows); j++)
+		for (int j = 0; j < src.rows; j++)
 		{
-			aux = bordes(Rect(i + (mask.rows / 2), j, 1, mask.rows));
-			//modificada[j,i] = convolSignal1DMask(aux, mask);
+			aux = b(Rect(i, j, mask.rows, mask.rows));
+			src.at<Vec3d>(j, i) = convolVectorMask(aux, mask);
 		}
 	}
 
-	//Debido a un bug que corrompia los bordes de la imagen segun se aplicaba de forma sucesiva convoluciones sobre ella
-	//Se ha procedido a solucionar el tema haciendo estas conversiones. Dichas conversiones no hacen absolutamente nada
-	//Puesto que hacen un cambio y automaticamente lo revierten. Tras varias horas de trabajo solo en este bug esta fue la
-	//unica solucion encontrada.
-	/*modificada.convertTo(modificada, CV_8U);
-	bordes = makeBorders(modificada, mask, modo);
-	modificada.convertTo(modificada, CV_64F);
-	bordes.convertTo(bordes, CV_64F);*/
-
-	//Comenzamos a aplicar la mascara por columnas
-	for (int i = 0; i < (modificada.cols); i++)
-	{
-		for (int j = 0; j < (modificada.rows); j++)
-		{
-			aux = bordes(Rect(i, j + (mask.rows / 2), mask.rows, 1));
-			modificada.at<Vec3d>(j, i) = convolSignal1DMask(aux, mask.t());
-		}
-	}
-
-	return modificada;
+	return src;
 }
 
-Mat filterGauss(Mat &im, double sigma = 1.0, int contorno = 0)
+Mat filterGauss(Mat &src, double sigma = 1.0)
 {
+	//cvtColor(src, src, CV_GRAY2BGR, 3);
 	Mat mask = gaussMask(4*sigma + 1, sigma);
-	Mat imGauss = filterGauss(im, mask, contorno);
+	Mat imGauss = filterGauss(src, mask);
 	return imGauss;
+}
+
+Mat imgHybrid(Mat &m1, double sigma1, Mat &m2, double sigma2)
+{
+	Mat alta, baja, h, aux;
+
+	// Igualo tamaño y tipo de ambas imágenes.
+	resize(m2, m2, Size(m1.cols, m1.rows));
+	m2.convertTo(m2, m1.type());
+
+	baja = filterGauss(m2, sigma2);
+	alta =  filterGauss(m1, sigma1);
+	m1.convertTo(m1, alta.type());
+	alta = 1 - alta;
+
+	h = baja + alta;
+
+	hconcat(baja, alta, aux);
+	hconcat(aux, h, aux);
+	return aux;
 }
 
 int main(int argc, char* argv[])
@@ -238,11 +171,16 @@ int main(int argc, char* argv[])
 		//m.push_back(imread(argv[i], CV_GRAY2BGR));
 		//m.push_back(imread(argv[i], CV_8UC3));
 		m.push_back(imread(argv[i]));*/
-	Mat im = imread(argv[1], CV_GRAY2BGR);
-	m.push_back(filterGauss(im, 1.0, 0));
-	m.push_back(filterGauss(im, 1.0, 1));
-		m.push_back(filterGauss(im, 10.0, 0));
-			m.push_back(filterGauss(im, 10.0, 1));
+	Mat m1 = imread(argv[1]);
+	Mat m2 = imread(argv[2]);
+	m.push_back(imgHybrid(m1, 1.0, m2, 5.0));
+	/*m.push_back(im);
+	m.push_back(filterGauss(im, 1.0));
+	m.push_back(filterGauss(im, 1.0));
+	m.push_back(filterGauss(im, 5.0));
+	m.push_back(filterGauss(im, 5.0));
+	m.push_back(filterGauss(im, 10.0));
+	m.push_back(filterGauss(im, 10.0));*/
 
 	pintaMI(m);
 	return 0;
