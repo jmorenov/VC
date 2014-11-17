@@ -39,7 +39,7 @@ void tile(const vector<Mat> &src, Mat &dst, int grid_x, int grid_y)
 
 void pintaMI(vector<Mat> im)
 {
-	int gridx=1, gridy=2;
+	int gridx=3, gridy=1;
 	Mat res = Mat(600,600, CV_8UC3);
   tile(im,res,gridx,gridy);
   pintaI(res);
