@@ -7,105 +7,346 @@
 
 
 #include "funciones.h"
+#include <algorithm>
+#include <opencv2/nonfree/nonfree.hpp>
+#include <cmath>
+#include <iostream>
 
-double valorHarrys(Vec6d pixel)
-{
-	double a = pixel[0], b = pixel[1], c;
-	c=pow(a+b,2);
-	return ((a*b)-(0.04*c));
+using namespace std;
+using namespace cv;
+
+double valorHarrys(Vec6d pixel) {
+    double a = pixel[0], b = pixel[1], c;
+    c = pow(a + b, 2);
+
+    return ((a * b) - (0.04 * c));
 }
 
-vector <Mat> gaussPirHarrys(Mat & imagen, int niveles)
-{
-	//Matriz auxiliar para hacer las concatenaciones con la imagen original
-	Mat aux((imagen.rows/2), (imagen.cols/2), CV_64FC3, 0.0);
-	Mat alisada;
+vector <Mat> gaussPirHarrys(Mat &imagen, int niveles) {
+    //Matriz auxiliar para hacer las concatenaciones con la imagen original
+    Mat aux((imagen.rows / 2), (imagen.cols / 2), CV_64FC3, 0.0);
+    Mat alisada;
 
-	vector<Mat> salida;
-	//Actulizamos la imagen
-	imagen.copyTo(alisada);
-	salida.push_back(imagen);
-	//Para cada nivel
-	for(int i = 1; i<niveles; i++)
-	{
-		alisada.convertTo(alisada, CV_8U);
-		//Aplicamos la convolucion a la imagen
-		alisada = filterGauss(alisada, 1.0);
-		//Submuestreamos
-		for(int j = 0; j < aux.rows; j++)
-		{
-			for (int k = 0; k < aux.cols; k++)
-			{
-				aux.at <Vec3d> (j,k) = alisada.at <Vec3d> (j*2, k*2);
-			}
-		}
-		aux.copyTo(alisada);
-		aux.convertTo(aux, CV_8UC3);
+    vector<Mat> salida;
+    //Actulizamos la imagen
+    imagen.copyTo(alisada);
+    salida.push_back(imagen);
+    //Para cada nivel
+    for (int i = 1; i < niveles; i++) {
+        alisada.convertTo(alisada, CV_8U);
+        //Aplicamos la convolucion a la imagen
+        alisada = filterGauss(alisada, 2.0);
+        //Submuestreamos
+        for (int j = 0; j < aux.rows; j++) {
+            for (int k = 0; k < aux.cols; k++) {
+                aux.at <Vec3d> (j, k) = alisada.at <Vec3d> (j * 2, k * 2);
+            }
+        }
+        aux.copyTo(alisada);
+        aux.convertTo(aux, CV_8UC3);
 
-		salida.push_back(aux);
-		//Reseteamos la matriz auxiliar
-		aux = aux.zeros((alisada.rows/2), (alisada.cols/2), CV_64FC3);
-	}
+        salida.push_back(aux);
+        //Reseteamos la matriz auxiliar
+        aux = aux.zeros((alisada.rows / 2), (alisada.cols / 2), CV_64FC3);
+    }
 
-	return salida;
+    return salida;
 }
 
-vector <punto> puntosHarrys(Mat src)
-{
-	vector<punto> puntos;
-	vector<Mat> piramide;
-	piramide = gaussPirHarrys(src,4);
-	Mat resultados;
-	Vec6d aux;
-	punto pt;
-	priority_queue <punto> pq;
-	//priority_queue <punto, vector<punto>, greater<punto> > pq;
-	for(unsigned int i = 0; i < piramide.size(); i++)
-	{
-		resultados.zeros(piramide[0].rows, piramide[0].cols, CV_64FC(6));
+vector <punto> puntosHarrys(vector<Mat> piramide) {
+    vector<punto> puntos, maximos, aux;
 
-		if(piramide[i].type() != 0)
-		{
-			cvtColor(piramide[i], piramide[i], CV_RGB2GRAY);
-		}
-		cornerEigenValsAndVecs(piramide[i], resultados, 7, 5);
-		for(int j = 0; j<resultados.rows; j++)
-		{
-			for(int k = 0; k<resultados.cols; k++)
-			{
-				aux = resultados.at<Vec6d>(j,k);
-				if(valorHarrys(aux)>0)
-				{
-					pt.x = j;
-					pt.y = k;
-					pt.nivel = i+1;
-					pt.valorH = valorHarrys(aux);
-					pq.push(pt);
-				}
-			}
-		}
-	}
-	for(int i = 0; i < 1000; i++)
-	{
-		puntos.push_back(pq.top());
-		pq.pop();
-	}
-	return puntos;
+    Mat resultados, valoresH;
+    for (unsigned int i = 0; i < piramide.size(); i++) {
+
+        if (piramide[i].type() != 0) {
+            piramide[i].convertTo(piramide[i], CV_8UC3);
+            cvtColor(piramide[i], piramide[i], CV_RGB2GRAY);
+        }
+
+        cornerEigenValsAndVecs(piramide[i], resultados, 5, 3);
+        valoresH = valoresH.zeros(resultados.rows, resultados.cols, CV_64FC1);
+
+        for (int j = 0; j < resultados.rows; j++) {
+            for (int k = 0; k < resultados.cols; k++) {
+                valoresH.at<double>(j, k) = valorHarrys(resultados.at<Vec6d>(j, k));
+            }
+        }
+        aux = selecMax(valoresH, 5, i);
+        //cornerHarris(piramide[i], resultados, 5, 3, 0.04, BORDER_DEFAULT);
+        //aux = selecMax(resultados, 5, i);
+        puntos.insert(puntos.end(), aux.begin(), aux.end());
+
+    }
+    sort (puntos.begin(), puntos.end());
+
+
+    for (unsigned int i = 0; (i < 1000) && (i < puntos.size()); i++) {
+        maximos.push_back(puntos[puntos.size() - i - 1]);
+        //cout <<  puntos[puntos.size()-i-1].valorH << endl;
+    }
+
+
+    return maximos;
 }
 
-Mat pintaCirculos(Mat imagen)
-{
-	Mat salida;
-	vector<punto> puntos = puntosHarrys(imagen);
-	imagen.copyTo(salida);
-	Scalar color = Scalar(185, 174, 255);
-	salida.convertTo(salida, CV_8UC1);
-	//salida.convertTo(salida, CV_GRAY2RGB);
-	for(unsigned int i = 0; i < puntos.size(); i++)
-	{
-		circle(salida, Point(((puntos[i].x)*(puntos[i].nivel)),((puntos[i].y)*(puntos[i].nivel))), 10, color);
-	}
-	return salida;
+vector <punto> selecMax(Mat puntosHarrys, int tamanoVentana, int nivel) {
+    Mat binaria;
+    binaria = binaria.zeros(puntosHarrys.rows, puntosHarrys.cols, CV_8UC1);
+    Mat aux;
+    vector <punto> resultado;
+    double max;
+    bool esMax;
+    for (int i = 0; i < puntosHarrys.rows - tamanoVentana; i++) {
+        for (int j = 0; j < puntosHarrys.cols - tamanoVentana; j++) {
+
+            aux = puntosHarrys(Rect(j, i, tamanoVentana, tamanoVentana));
+            max = aux.at<double>((tamanoVentana / 2) + 1, (tamanoVentana / 2) + 1);
+            esMax = true;
+
+            for (int k = 0; k < aux.rows; k++) {
+                for (int l = 0; l < aux.cols; l++) {
+                    if (aux.at<double>(k, l) > max) {
+                        //cout << max << " " <<
+                        esMax = false;
+                    }
+                }
+            }
+            if (esMax == true) {
+                binaria.at<unsigned char> (i + (tamanoVentana / 2) + 1, j + (tamanoVentana / 2) + 1) = 255;
+            }
+
+
+        }
+    }
+    for (int i = 0; i < binaria.rows; i++) {
+        for (int j = 0; j < binaria.cols; j++) {
+            if (binaria.at<unsigned char>(i, j) != 0) {
+                resultado.push_back(punto(j, i, nivel, puntosHarrys.at<double>(i, j)));
+            }
+        }
+    }
+
+    return resultado;
+
+}
+
+void pintaCirculos(vector<Mat> piramide, vector<punto> puntos) {
+
+    vector<Mat> circulitos;
+
+    Scalar color = Scalar(185, 174, 255);
+    circulitos.resize(piramide.size());
+    for (unsigned int i = 0; i < piramide.size(); i++) {
+        piramide[i].copyTo(circulitos[i]);
+        if (circulitos[i].type() != 16) {
+            cvtColor(circulitos[i], circulitos[i], CV_GRAY2RGB);
+        }
+        if (piramide[i].type() != 0) {
+            cvtColor(piramide[i], piramide[i], CV_RGB2GRAY);
+        }
+
+    }
+
+    for (unsigned int i = 0; i < puntos.size(); i++) {
+        circle(circulitos[puntos[i].nivel], Point(puntos[i].x, puntos[i].y), 5, color);
+    }
+
+    for (unsigned int i = 0; i < circulitos.size(); i++) {
+        pintaI(circulitos[i]);
+    }
+
+}
+
+void refinarPuntos(Mat imagen, vector<punto> &pts) {
+
+
+    Size winSize = Size( 5, 5 );
+    Size zeroZone = Size( -1, -1 );
+    TermCriteria criteria = TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001 );
+
+    vector<Point2f> corners;
+    for (unsigned int i = 0; i < pts.size(); i++) {
+        corners.push_back(Point2f(pts[i].x, pts[i].y));
+    }
+    imagen.convertTo(imagen, CV_8UC1);
+    cornerSubPix(imagen, corners, winSize, zeroZone, criteria );
+
+    for (unsigned int i = 0; i < pts.size(); i++) {
+        pts[i].x = corners[i].x;
+        pts[i].y = corners[i].y;
+    }
+
+}
+
+void calcularOrientacion(Mat imagen,  vector<punto> &pts) {
+    Mat sobelX, sobelY;
+    double deltaX, deltaY, PI = 3.14159265;
+    Sobel(imagen, sobelX, CV_64F, 1, 0);
+    Sobel(imagen, sobelY, CV_64F, 0, 1);
+
+    for (unsigned int i = 0; i < pts.size(); i++) {
+        deltaX = sobelX.at <double> (pts[i].x, pts[i].y);
+        deltaY = sobelY.at <double> (pts[i].x, pts[i].y);
+        if (deltaX == 0) {
+            pts[i].orientacion = 0;
+        }
+        else {
+            pts[i].orientacion = atan((deltaY / deltaX) * (180 / PI));
+        }
+
+
+    }
+}
+
+void drawOrientacion(Mat imagen,  vector<punto> &pts) {
+    Mat salida;
+    imagen.copyTo(salida);
+    double radio;
+    cvtColor(salida, salida, CV_GRAY2RGB);
+
+    Scalar color;
+    for (unsigned int i = 0; i < pts.size(); i++) {
+        if (pts[i].nivel == 0) {
+            color = Scalar(185, 174, 5);
+        }
+        if (pts[i].nivel == 1) {
+            color = Scalar(45, 233, 128);
+        }
+        if (pts[i].nivel == 2) {
+            color = Scalar(128, 45, 95);
+        }
+        if (pts[i].nivel == 3) {
+            color = Scalar(33, 99, 200);
+        }
+        radio = (pts[i].nivel + 1) * 6;
+        circle(salida, Point(pts[i].x, pts[i].y), radio, color, 1);
+
+        line(salida, Point(pts[i].x, pts[i].y), Point(pts[i].x + radio * cos(pts[i].orientacion), pts[i].y + radio * sin(pts[i].orientacion)), color, 2);
+
+        color = Scalar(185, 174, 5);
+    }
+
+    pintaI(salida);
+
+}
+
+void harrys(Mat imagen) {
+    vector<Mat> piramide = gaussPirHarrys(imagen, 4);
+    vector<punto> puntos = puntosHarrys(piramide);
+
+    pintaCirculos(piramide, puntos);
+
+    refinarPuntos(imagen, puntos);
+
+    calcularOrientacion(imagen, puntos);
+
+    drawOrientacion(imagen, puntos);
+}
+
+void sift(Mat &img1, vector<KeyPoint> &keypoints) {
+    SIFT detector = SIFT();
+    Mat mask;
+    detector.operator()(img1, mask, keypoints);
+
+    Mat salida;
+    drawKeypoints(img1, keypoints, salida);
+    //pintaI(salida);
+}
+
+void surf(Mat &img1, vector<KeyPoint> &keypoints) {
+    SURF detector = SURF();
+    Mat mask;
+    detector.operator()(img1, mask, keypoints);
+
+    Mat salida;
+    drawKeypoints(img1, keypoints, salida);
+    pintaI(salida);
+}
+
+
+void computeMatching(Mat &img1, Mat &img2, vector<KeyPoint> &keypoints1, vector<KeyPoint> &keypoints2, vector<DMatch> &matches ) {
+    // computing descriptors
+    SiftDescriptorExtractor extractor;
+    Mat descriptors1, descriptors2;
+    extractor.compute(img1, keypoints1, descriptors1);
+    extractor.compute(img2, keypoints2, descriptors2);
+
+    // matching descriptors
+    bool crossCheck = 1;
+    BFMatcher matcher (NORM_L2, crossCheck );
+    matcher.match(descriptors1, descriptors2, matches);
+
+}
+
+Mat mosaic(Mat &img1, Mat &img2, vector<KeyPoint> &keypoints1, vector<KeyPoint> &keypoints2, vector<DMatch> &matches) {
+
+    Mat H0 (3, 3, CV_64FC1), mosaico;
+    H0.at<double>(0, 0) = 1;
+    H0.at<double>(0, 1) = 0;
+    H0.at<double>(0, 2) = img1.cols / 4;
+    H0.at<double>(1, 0) = 0;
+    H0.at<double>(1, 1) = 1;
+    H0.at<double>(1, 2) = img1.rows / 4;
+    H0.at<double>(2, 0) = 0;
+    H0.at<double>(2, 1) = 0;
+    H0.at<double>(2, 2) = 1;
+
+
+    warpPerspective(img1, mosaico, H0, Size(img1.rows * 2, img1.cols * 2));
+
+    vector< Point2f > imagen;
+    vector< Point2f > escena;
+
+    for ( unsigned int i = 0; i < matches.size(); i++ ) {
+
+        imagen.push_back( keypoints1[ matches[i].queryIdx ].pt );
+        escena.push_back( keypoints2[ matches[i].trainIdx ].pt );
+    }
+
+    Mat H = findHomography(escena, imagen, CV_RANSAC );
+
+    H = H * H0;
+
+    warpPerspective(img2, mosaico, H, mosaico.size(), CV_INTER_LINEAR + CV_WARP_FILL_OUTLIERS, BORDER_TRANSPARENT);
+
+    return mosaico;
+}
+
+Mat makePanorama(vector <Mat> imagenes){
+
+    Mat mosaico;
+
+    vector<KeyPoint> keypoints1;
+    vector<KeyPoint> keypoints2;
+    vector<DMatch> matches;
+
+    keypoints1.clear();
+    sift(imagenes[0],keypoints1);
+    keypoints2.clear();
+    sift(imagenes[1],keypoints2);
+
+    matches.clear();
+    computeMatching(imagenes[0],imagenes[1],keypoints1,keypoints2, matches);
+
+    mosaico = mosaic(imagenes[0],imagenes[1],  keypoints1, keypoints2, matches);
+
+    for(unsigned int i = 2; i<imagenes.size(); i++){
+
+        keypoints1.clear();
+        sift(mosaico,keypoints1);
+
+        keypoints2.clear();
+        sift(imagenes[i],keypoints2);
+
+        matches.clear();
+        computeMatching(mosaico,imagenes[i],keypoints1,keypoints2, matches);
+
+        mosaico = mosaic(mosaico,imagenes[i],  keypoints1, keypoints2, matches);
+
+    }
+
+    return mosaico;
 }
 
 /**

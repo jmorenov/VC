@@ -9,36 +9,60 @@
 #define FUNCIONES_H_
 
 #include <queue>
-#include <cmath>
-#include <iostream>
 #include <opencv2/opencv.hpp>
-#include <cstdlib>
 #include <vector>
 
 using namespace cv;
-using namespace std;
 
-struct punto
-{
+struct punto{
 	int x, y, nivel;
-	double valorH;
-	bool operator < (const punto & pt) const
-	{
+	double valorH, orientacion;
+
+	punto(int xa, int ya, int nivela, double valorHa){
+		x = xa;
+		y = ya;
+		nivel = nivela;
+		valorH = valorHa;
+		orientacion = 0;
+	}
+
+	bool operator < (const punto & pt) const{
 		return valorH < pt.valorH;
 	}
-	bool operator > (const punto & pt) const
-	{
+
+	bool operator > (const punto & pt) const {
 		return valorH > pt.valorH;
 	}
+
 };
 
-double valorHarrys(Vec6d pixel);
+double valorHarrys(double det1, double det2);
 
 vector <Mat> gaussPirHarrys(Mat & imagen, int niveles);
 
-vector <punto> puntosHarrys(Mat src);
+vector <punto> puntosHarrys(vector <Mat> piramide);
 
-Mat pintaCirculos(Mat imagen);
+vector <punto> selecMax(Mat puntosHarrys, int tamanoVentana, int nivel);
+
+void pintaCirculos(vector<Mat> piramide, vector<punto> puntos);
+
+void refinarPuntos(Mat imagen, vector<punto> & pts);
+
+void calcularOrientacion(Mat imagen,  vector<punto> & pts);
+
+void drawOrientacion(Mat imagen,  vector<punto> & pts);
+
+void harrys(Mat imagen);
+
+void sift(Mat& img1, vector<KeyPoint>& keypoints);
+
+void surf(Mat& img1, vector<KeyPoint>& keypoints);
+
+void computeMatching(Mat& img1, Mat& img2,vector<KeyPoint>& keypoints1,vector<KeyPoint>& keypoints2, vector<DMatch>& matches);
+
+Mat mosaic(Mat& img1, Mat& img2,vector<KeyPoint>& keypoints1,vector<KeyPoint>& keypoints2, vector<DMatch>& matches);
+
+Mat makePanorama(vector <Mat> imagenes);
 
 /**
  * Funciones implementadas en el Trabajo 1.
