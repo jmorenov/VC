@@ -14,55 +14,51 @@
 
 using namespace cv;
 
-struct punto{
-	int x, y, nivel;
-	double valorH, orientacion;
+/**
+ * CAMBIAR!!
+ */
+struct PointH
+{
+	Point p;
+	int level;
+	double orientation;
+	double valorH;
 
-	punto(int xa, int ya, int nivela, double valorHa){
-		x = xa;
-		y = ya;
-		nivel = nivela;
-		valorH = valorHa;
-		orientacion = 0;
+	PointH(Point _p, int _level, double _valorH)
+	{
+		p.x = _p.x;
+		p.y = _p.y;
+		level = _level;
+		orientation = 0.0;
+		valorH = _valorH;
 	}
 
-	bool operator < (const punto & pt) const{
-		return valorH < pt.valorH;
-	}
+	bool operator < (const PointH & pt) const{
+			return valorH < pt.valorH;
+		}
 
-	bool operator > (const punto & pt) const {
-		return valorH > pt.valorH;
-	}
-
+		bool operator > (const PointH & pt) const {
+			return valorH > pt.valorH;
+		}
 };
 
 double valorHarrys(double det1, double det2);
 
 vector <Mat> gaussPirHarrys(Mat & imagen, int niveles);
 
-vector <punto> puntosHarrys(vector <Mat> piramide);
+vector <PointH> puntosHarrys(vector <Mat> piramide);
 
-vector <punto> selecMax(Mat puntosHarrys, int tamanoVentana, int nivel);
+vector <PointH> selecMax(Mat puntosHarrys, int tamanoVentana, int nivel);
 
-void pintaCirculos(vector<Mat> piramide, vector<punto> puntos);
+void DrawCircles(Mat img, vector<PointH> pHarris, int level = 0);
 
-void refinarPuntos(Mat imagen, vector<punto> & pts);
+void refinarPuntos(Mat imagen, vector<PointH> & pts);
 
-void calcularOrientacion(Mat imagen,  vector<punto> & pts);
+void calcularOrientacion(Mat imagen,  vector<PointH> & pts);
 
-void drawOrientacion(Mat imagen,  vector<punto> & pts);
+void drawOrientacion(Mat imagen,  vector<PointH> & pts);
 
-void harrys(Mat imagen);
-
-void sift(Mat& img1, vector<KeyPoint>& keypoints);
-
-void surf(Mat& img1, vector<KeyPoint>& keypoints);
-
-void computeMatching(Mat& img1, Mat& img2,vector<KeyPoint>& keypoints1,vector<KeyPoint>& keypoints2, vector<DMatch>& matches);
-
-Mat mosaic(Mat& img1, Mat& img2,vector<KeyPoint>& keypoints1,vector<KeyPoint>& keypoints2, vector<DMatch>& matches);
-
-Mat makePanorama(vector <Mat> imagenes);
+void detectPointsHarris(Mat imagen);
 
 /**
  * Funciones implementadas en el Trabajo 1.
