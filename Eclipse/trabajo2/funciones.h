@@ -42,23 +42,33 @@ struct PointH
 		}
 };
 
-double valorHarrys(double det1, double det2);
+double HarrisPixel(Vec3d p);
 
-vector <Mat> gaussPirHarrys(Mat & imagen, int niveles);
+vector<Mat> pyramidGaussianList2(Mat img, int levels);
 
-vector <PointH> puntosHarrys(vector <Mat> piramide);
+vector<Mat> pyramidGaussianList(Mat img, int levels);
 
-vector <PointH> selecMax(Mat puntosHarrys, int tamanoVentana, int nivel);
+vector<PointH> adaptativeNonMaximalSupression(Mat puntosHarrys,int tamanoVentana, int nivel);
 
-void DrawCircles(Mat img, vector<PointH> pHarris, int level = 0);
+vector<PointH> listPointHarris(Mat img, vector<Mat> &pyramid);
 
-void refinarPuntos(Mat imagen, vector<PointH> & pts);
+void drawCircles(Mat img, vector<PointH> pHarris, int level = -1);
 
-void calcularOrientacion(Mat imagen,  vector<PointH> & pts);
+void refinePoints(vector<Mat> pyramid, vector<PointH> &pHarris);
 
-void drawOrientacion(Mat imagen,  vector<PointH> & pts);
+void refinePoints(Mat img, vector<PointH> &pHarris, int level = -1);
 
-void detectPointsHarris(Mat imagen);
+void calculateOrientation(Mat img, vector<PointH> &pHarris);
+
+void calculateOrientation2(Mat img, vector<PointH> &pHarris);
+
+void drawRegions(Mat img, vector<PointH> &pHarris);
+
+void detectPointsHarris(Mat img);
+
+void detectSIFT(Mat img, vector<KeyPoint> &keypoints);
+
+void detectSURF(Mat img, vector<KeyPoint> &keypoints);
 
 /**
  * Funciones implementadas en el Trabajo 1.

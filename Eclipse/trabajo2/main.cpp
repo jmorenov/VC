@@ -22,9 +22,19 @@ int main(int argc, char* argv[])
 
 	vector<Mat> m, imgs_m(imgs.size());
 	for (unsigned int i = 0; i < imgs.size(); i++)
-		imgs_m[i] = imread(imgs[i], CV_LOAD_IMAGE_GRAYSCALE);
+		//imgs_m[i] = imread(imgs[i], CV_LOAD_IMAGE_GRAYSCALE);
+		imgs_m[i] = imread(imgs[i]);
 
-	detectPointsHarris(imgs_m[0]);
+	/*for(unsigned int i = 0; i < imgs.size(); i++)
+		detectPointsHarris(imgs_m[i]);*/
+
+	vector<KeyPoint> sift_keyp;
+	for(unsigned int i=0; i<imgs.size(); i++)
+		detectSIFT(imgs_m[i], sift_keyp);
+
+	vector<KeyPoint> surf_keyp;
+	for(unsigned int i=0; i<imgs.size(); i++)
+		detectSURF(imgs_m[i], surf_keyp);
 
 	return 0;
 }

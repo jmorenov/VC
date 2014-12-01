@@ -1,1 +1,3 @@
-main.d: ../main.cpp
+main.d: ../main.cpp ../funciones.h
+
+../funciones.h:
