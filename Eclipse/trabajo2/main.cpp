@@ -12,15 +12,14 @@
 
 int main(int argc, char* argv[])
 {
-	/*cv::initModule_nonfree();
-	cv::initModule_features2d();*/
 	vector<string> imgs;
-	/*imgs.push_back("yosemite/Yosemite1.jpg");
-	 imgs.push_back("yosemite/Yosemite2.jpg");*/
 	imgs.push_back("imagenes/yosemite_full/yosemite1.jpg");
 	imgs.push_back("imagenes/yosemite_full/yosemite2.jpg");
 	imgs.push_back("imagenes/yosemite_full/yosemite3.jpg");
 	imgs.push_back("imagenes/yosemite_full/yosemite4.jpg");
+	//imgs.push_back("imagenes/yosemite_full/yosemite5.jpg");
+	//imgs.push_back("imagenes/yosemite_full/yosemite6.jpg");
+	//imgs.push_back("imagenes/yosemite_full/yosemite7.jpg");
 
 	vector<Mat> m, imgs_m(imgs.size());
 	for (unsigned int i = 0; i < imgs.size(); i++)
@@ -28,15 +27,25 @@ int main(int argc, char* argv[])
 		imgs_m[i] = imread(imgs[i]);
 
 	/*for(unsigned int i = 0; i < imgs.size(); i++)
-		detectPointsHarris(imgs_m[i]);*/
+		detectHarris(imgs_m[i]);*/
 
-	vector<KeyPoint> sift_keyp;
+	/*vector<KeyPoint> sift_keyp;
 	for(unsigned int i=0; i<imgs.size(); i++)
 		detectSIFT(imgs_m[i], sift_keyp);
 
 	vector<KeyPoint> surf_keyp;
 	for(unsigned int i=0; i<imgs.size(); i++)
-		detectSURF(imgs_m[i], surf_keyp);
+		detectSURF(imgs_m[i], surf_keyp);*/
 
+	/*vector<KeyPoint> keypoints1, keypoints2;
+	vector<DMatch> matches;
+	computeMatchingSIFT(imgs_m[0], imgs_m[1], keypoints1, keypoints2, matches);
+
+	Mat img_matches;
+	drawMatches(imgs_m[0], keypoints1, imgs_m[1], keypoints2, matches, img_matches);
+	pintaI(img_matches);*/
+
+	Mat panorama = computePanorama(imgs_m);
+	pintaI(panorama);
 	return 0;
 }

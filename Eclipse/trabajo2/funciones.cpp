@@ -304,7 +304,7 @@ void drawRegions(Mat img, vector<PointH> &pHarris)
 		}
 		radio = (pHarris[i].level + 1) * 6;
 		//circle(img, pHarris[i].p, radio, color, 1);
-		cout<<pHarris[i].orientation<<endl;
+		cout << pHarris[i].orientation << endl;
 		RotatedRect rRect = RotatedRect(pHarris[i].p, Size(radio, radio),
 				pHarris[i].orientation);
 		Rect brect = rRect.boundingRect();
@@ -317,7 +317,7 @@ void drawRegions(Mat img, vector<PointH> &pHarris)
 	pintaI(img);
 }
 
-void detectPointsHarris(Mat img)
+void detectHarris(Mat img)
 {
 	Mat img_original = img;
 
@@ -338,58 +338,142 @@ void detectPointsHarris(Mat img)
 	drawRegions(img_original, point_harris);
 }
 
-/**
- * CAMBIAR!!
- */
 void detectSIFT(Mat img, vector<KeyPoint> &keypoints)
 {
-    SIFT detector = SIFT();
-    detector.operator()(img, Mat(), keypoints);
-    drawKeypoints(img, keypoints, img);
-    pintaI(img);
+	/*int nfeatures = 0;
+	 int nOctaves = 4;
+	 int nOctaveLayers = 3;
+	 double contrastThreshold = 0.06;
+	 double edgeThreshold=10;
+	 double sigma = 1.6;
+	 SIFT detector = SIFT(nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma);*/
+	SIFT detector = SIFT(); // Parámetros por defecto.
+	detector.operator()(img, Mat(), keypoints);
+	drawKeypoints(img, keypoints, img);
+	pintaI(img);
+}
+
+void detectSURF(Mat img, vector<KeyPoint> &keypoints)
+{
+	/*double hessianThreshold = 1;
+	 int nOctaves = 4;
+	 int nOctaveLayers = 2;
+	 bool extended = true;
+	 bool upright = false;
+	 SURF detector = SURF(hessianThreshold, nOctaves, nOctaveLayers, extended, upright);*/
+	SURF detector = SURF(); // Parámetros por defecto.
+	detector.operator()(img, Mat(), keypoints);
+	drawKeypoints(img, keypoints, img);
+	pintaI(img);
+}
+
+void computeMatching(Mat img1, Mat img2, vector<KeyPoint> &keypoints1,
+		vector<KeyPoint> &keypoints2, vector<DMatch> &matches, METHOD method)
+{
+	if(checkColor(img1)) img1 = convertToGray(img1);
+	if(checkColor(img2)) img2 = convertToGray(img2);
+	Mat descriptors1, descriptors2;
+	if (method == SIFT_M)
+	{
+		SiftDescriptorExtractor extractor;
+		SiftFeatureDetector detector(400);
+		// detecting keypoints
+		if (keypoints1.empty() || keypoints2.empty())
+		{
+			detector.detect(img1, keypoints1);
+			detector.detect(img2, keypoints2);
+		}
+		// computing descriptors
+
+		extractor.compute(img1, keypoints1, descriptors1);
+		extractor.compute(img2, keypoints2, descriptors2);
+	}
+	else
+	{
+		SurfFeatureDetector detector(400);
+		SurfDescriptorExtractor extractor;
+		// detecting keypoints
+		if (keypoints1.empty() || keypoints2.empty())
+		{
+			detector.detect(img1, keypoints1);
+			detector.detect(img2, keypoints2);
+		}
+		// computing descriptors
+
+		extractor.compute(img1, keypoints1, descriptors1);
+		extractor.compute(img2, keypoints2, descriptors2);
+	}
+
+	// matching descriptors
+	BruteForceMatcher<L2<float> > matcher;
+	matcher.match(descriptors1, descriptors2, matches);
+}
+
+Mat computeMosaic(Mat &img1, Mat &img2)
+{
+	vector<KeyPoint> keypoints1, keypoints2;
+	vector<DMatch> matches;
+	computeMatching(img1, img2, keypoints1, keypoints2, matches, SURF_M);
+
+	Mat img_mosaic;
+	vector<Point2f> p1, p2;
+	for (unsigned int i = 0; i < matches.size(); i++)
+	{
+		p1.push_back(keypoints2[matches[i].trainIdx].pt);
+		p2.push_back(keypoints1[matches[i].queryIdx].pt);
+	}
+
+	Mat H = findHomography(p1, p2, CV_RANSAC);
+	warpPerspective(img2, img_mosaic, H, Size(img1.cols+img2.cols, img1.rows));
+	Mat half(img_mosaic, Rect(0, 0, img1.cols, img1.rows));
+	img1.copyTo(half);
+
+	cropBlackArea(img_mosaic);
+
+	return img_mosaic;
 }
 
 /**
- * CAMBIAR!!
+ * NO FUNCIONA.
  */
-void detectSURF(Mat img, vector<KeyPoint> &keypoints)
+Mat computePanorama(vector<Mat> imgs)
 {
-    SURF detector = SURF();
-    detector.operator()(img, Mat(), keypoints);
-    drawKeypoints(img, keypoints, img);
-    pintaI(img);
+	assert(imgs.size() >= 2);
+
+	Mat panorama = computeMosaic(imgs[0], imgs[1]);
+	for(unsigned int i=2; i<imgs.size(); i++)
+	{
+		panorama = computeMosaic(panorama, imgs[i]);
+	}
+
+	/*Mat panorama1 = computeMosaic(imgs[0], imgs[1]);
+	Mat panorama2 = computeMosaic(imgs[2], imgs[3]);
+	Mat panorama3 = computeMosaic(imgs[4], imgs[5]);
+	//Mat panorama4 = computeMosaic(panorama3, imgs[5]);
+	Mat panorama1_12 = computeMosaic(panorama1, panorama2);
+	//Mat panorama2_34 = computeMosaic(panorama3, panorama4);
+	Mat panorama = computeMosaic(panorama1_12, panorama3);*/
+
+	return panorama;
 }
 
-void sift(Mat& img1, vector<KeyPoint>& keypoints)
+void cropBlackArea(Mat &img)
 {
-	/*SIFT::CommonParams commParams = SIFT::CommonParams();
-	commParams.nOctaves=4;
-	commParams.nOctaveLayers=3;
-	SIFT::DetectorParams detectorParams = SIFT::DetectorParams();
-	detectorParams.threshold=0.06; // parametro que fija la cantidad de respuestas
-	detectorParams.edgeThreshold=10;
-	SIFT detector = SIFT(SIFT::CommonParams(),detectorParams);
-	Mat mask;
-	detector.operator()(img1, mask,keypoints);*/
+	std::vector<cv::Point> nonBlackList;
+	nonBlackList.reserve(img.rows * img.cols);
+	for (int j = 0; j < img.rows; ++j)
+		for (int i = 0; i < img.cols; ++i)
+		{
+			if (img.at<cv::Vec3b>(j, i) != cv::Vec3b(0, 0, 0))
+			{
+				nonBlackList.push_back(cv::Point(i, j));
+			}
+		}
+	Rect bb = cv::boundingRect(nonBlackList);
+
+	img = img(bb);
 }
 
-/*void computeMatching(Mat& img1, Mat& img2,vector<KeyPoint>& keypoints1,vector<KeyPoint>& keypoints2, vector<DMatch>& matches )
-{
-	const SIFT::DescriptorParams descriptorParams = SIFT::DescriptorParams();
-	// computing descriptors
-	SiftDescriptorExtractor extractor;
-	Mat descriptors1, descriptors2;
-	extractor.compute(img1, keypoints1, descriptors1);
-	extractor.compute(img2, keypoints2, descriptors2);
-
-	// matching descriptors
-	bool crossCheck=1;
-	Ptr<DescriptorMatcher> matcher =
-
-	Ptr<DescriptorMatcher> matcher = BFMatcher::create("BruteForce");
-	BFMatcher(NORM_L2, crossCheck );
-	matcher.match(descriptors1, descriptors2, matches);
-}*/
 
 /**
  * Genera una ventana en la que pinta la imagen que se pasa en img.

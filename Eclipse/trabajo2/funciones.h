@@ -42,6 +42,8 @@ struct PointH
 		}
 };
 
+enum METHOD { SIFT_M, SURF_M, HARRIS };
+
 double HarrisPixel(Vec3d p);
 
 vector<Mat> pyramidGaussianList2(Mat img, int levels);
@@ -64,11 +66,19 @@ void calculateOrientation2(Mat img, vector<PointH> &pHarris);
 
 void drawRegions(Mat img, vector<PointH> &pHarris);
 
-void detectPointsHarris(Mat img);
+void detectHarris(Mat img);
 
 void detectSIFT(Mat img, vector<KeyPoint> &keypoints);
 
 void detectSURF(Mat img, vector<KeyPoint> &keypoints);
+
+void computeMatching(Mat img1, Mat img2,vector<KeyPoint>& keypoints1,vector<KeyPoint>& keypoints2, vector<DMatch>& matches, METHOD method);
+
+Mat computeMosaic(Mat &img1, Mat &img2);
+
+Mat computePanorama(vector<Mat> imgs);
+
+void cropBlackArea(Mat &img);
 
 /**
  * Funciones implementadas en el Trabajo 1.
