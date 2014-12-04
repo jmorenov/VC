@@ -10,7 +10,14 @@
 
 #include "funciones.h"
 #include <algorithm>
+
 #include <opencv2/nonfree/nonfree.hpp>
+#include <opencv2/nonfree/features2d.hpp>
+#include <opencv2/legacy/legacy.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/core/core.hpp>
+
 #include <cmath>
 #include <iostream>
 #include <math.h>
@@ -93,7 +100,6 @@ vector<PointH> adaptativeNonMaximalSupression(Mat puntosHarrys,
 	{
 		for (int j = 0; j < puntosHarrys.cols - tamanoVentana; j++)
 		{
-
 			aux = puntosHarrys(Rect(j, i, tamanoVentana, tamanoVentana));
 			max = aux.at<double>((tamanoVentana / 2) + 1,
 					(tamanoVentana / 2) + 1);
@@ -140,7 +146,6 @@ vector<PointH> adaptativeNonMaximalSupression(Mat puntosHarrys,
 			}
 		}
 	}
-
 	return resultado;
 }
 
@@ -354,6 +359,37 @@ void detectSURF(Mat img, vector<KeyPoint> &keypoints)
     drawKeypoints(img, keypoints, img);
     pintaI(img);
 }
+
+void sift(Mat& img1, vector<KeyPoint>& keypoints)
+{
+	/*SIFT::CommonParams commParams = SIFT::CommonParams();
+	commParams.nOctaves=4;
+	commParams.nOctaveLayers=3;
+	SIFT::DetectorParams detectorParams = SIFT::DetectorParams();
+	detectorParams.threshold=0.06; // parametro que fija la cantidad de respuestas
+	detectorParams.edgeThreshold=10;
+	SIFT detector = SIFT(SIFT::CommonParams(),detectorParams);
+	Mat mask;
+	detector.operator()(img1, mask,keypoints);*/
+}
+
+/*void computeMatching(Mat& img1, Mat& img2,vector<KeyPoint>& keypoints1,vector<KeyPoint>& keypoints2, vector<DMatch>& matches )
+{
+	const SIFT::DescriptorParams descriptorParams = SIFT::DescriptorParams();
+	// computing descriptors
+	SiftDescriptorExtractor extractor;
+	Mat descriptors1, descriptors2;
+	extractor.compute(img1, keypoints1, descriptors1);
+	extractor.compute(img2, keypoints2, descriptors2);
+
+	// matching descriptors
+	bool crossCheck=1;
+	Ptr<DescriptorMatcher> matcher =
+
+	Ptr<DescriptorMatcher> matcher = BFMatcher::create("BruteForce");
+	BFMatcher(NORM_L2, crossCheck );
+	matcher.match(descriptors1, descriptors2, matches);
+}*/
 
 /**
  * Genera una ventana en la que pinta la imagen que se pasa en img.

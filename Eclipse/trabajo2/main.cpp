@@ -12,6 +12,8 @@
 
 int main(int argc, char* argv[])
 {
+	/*cv::initModule_nonfree();
+	cv::initModule_features2d();*/
 	vector<string> imgs;
 	/*imgs.push_back("yosemite/Yosemite1.jpg");
 	 imgs.push_back("yosemite/Yosemite2.jpg");*/
