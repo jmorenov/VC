@@ -21,37 +21,65 @@ int main(int argc, char* argv[])
 	//imgs.push_back("imagenes/yosemite_full/yosemite7.jpg");
 
 	// Lectura de las imágenes.
+	cout<<"Leyendo imágenes..."<<endl;
 	vector<Mat> m, images(imgs.size());
 	for (unsigned int i = 0; i < imgs.size(); i++)
 		images[i] = imread(imgs[i]);
+	cout<<"Finalizada lectura de imágenes."<<endl;
 	
 	// Ejercicio 1: Detección de puntos Harris multiescala.
-	vector<Mat> images_harris;
+	vector<PointHarris> pointharris;
+	cout<<"Ejercicio 1:"<<endl;
+	cout<<"Detectando Puntos Harris..."<<endl;
 	for(unsigned int i = 0; i < imgs.size(); i++)
-		images_harris.push_back(detectHarris(images[i]));
-	pintaMI(images_harris);
+	{
+		cout<<"Detectando imagen "<<i<<"..."<<endl;
+		detectHarris(images[i], pointharris));
+		cout<<"Pintando puntos harris en imagen "<<i<<"..."<<endl;
+		drawPointHarris(images[i], pointharris);
+		cout<<"Pintando regiones en imagen "<<i<<"..."<<endl;
+		drawRegionHarris(images[i], pointharris);
+	}
 
 	// Ejercicio 2: Comparación de los detectores SIFT y SURF con el detector implementado MOPS.
-	vector<Mat> images_sift, images_surf;
-	vector<KeyPoint> sift_keyp;
+	vector<KeyPoint> keypoints;
+	cout<<"Ejercicio 2:"<<endl;
+	
+	// SIFT
+	cout<<"Detectando keypoints SIFT..."<<endl;
 	for(unsigned int i=0; i<imgs.size(); i++)
-		images_sift.push_back(detectSIFT(images[i], sift_keyp));
-
-	vector<KeyPoint> surf_keyp;
+	{
+		cout<<"Detectando imagen "<<i<<"..."<<endl;
+		detectSIFT(images[i], keypoints);
+		cout<<"Pintando keypoints en imagen "<<i<<"..."<<endl;
+		drawKeyPoints(images[i], keypoints);
+	}
+	
+	// SURF
+	cout<<"Detectando keypoints SURF..."<<endl;
 	for(unsigned int i=0; i<imgs.size(); i++)
-		images_surf.push_back(detectSURF(images[i], surf_keyp));
+	{
+		cout<<"Detectando imagen "<<i<<"..."<<endl;
+		detectSURF(images[i], keypoints);
+		cout<<"Pintando keypoints en imagen "<<i<<"..."<<endl;
+		drawKeyPoints(images[i], keypoints);
+	}
 
 	// Ejercicio 3: Poner en correspondencia dos imágenes.
+	cout<<"Ejercicio 3:"<<endl;
 	vector<KeyPoint> keypoints1, keypoints2;
 	vector<DMatch> matches;
+	cout<<"Detectando correspondencia en imágenes..."<<endl;
 	computeMatching(images[0], images[1], keypoints1, keypoints2, matches);
-	Mat img_matches;
-	drawMatches(images[0], keypoints1, images[1], keypoints2, matches, img_matches);
-	pintaI(img_matches);
+	cout<<"Pintando correspondencia en imágenes..."<<endl;
+	drawImageMatches(images[0], keypoints1, images[1], keypoints2, matches);
 
 	// Ejercicio 4: Estimar la homografía entre dos imágenes y crear un mosaico entre ambas imágenes.
+	cout<<"Ejercicio 4:"<<endl;
+	cout<<"Generando mosaico entre dos imágenes..."<<endl;
 	Mat mosaic = computeMosaic(images[0], images[1]);
+	cout<<"Pintando mosaico..."<<endl;
 	pintaI(mosaic);
-	
+	cout<<"Fin Trabajo 2."<<endl;
 	return 0;
 }
