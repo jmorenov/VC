@@ -17,14 +17,14 @@ using namespace cv;
 /**
  * CAMBIAR!!
  */
-struct PointH
+struct HarrisPoint
 {
 	Point p;
 	int level;
 	double orientation;
 	double valorH;
 
-	PointH(Point _p, int _level, double _valorH)
+	HarrisPoint(Point _p, int _level, double _valorH)
 	{
 		p.x = _p.x;
 		p.y = _p.y;
@@ -33,11 +33,11 @@ struct PointH
 		valorH = _valorH;
 	}
 
-	bool operator < (const PointH & pt) const{
+	bool operator < (const HarrisPoint & pt) const{
 			return valorH < pt.valorH;
 		}
 
-		bool operator > (const PointH & pt) const {
+		bool operator > (const HarrisPoint & pt) const {
 			return valorH > pt.valorH;
 		}
 };
@@ -50,33 +50,37 @@ vector<Mat> pyramidGaussianList2(Mat img, int levels);
 
 vector<Mat> pyramidGaussianList(Mat img, int levels);
 
-vector<PointH> adaptativeNonMaximalSupression(Mat puntosHarrys,int tamanoVentana, int nivel);
+vector<HarrisPoint> adaptativeNonMaximalSupression(Mat puntosHarrys, int tamanoVentana, int nivel);
 
-vector<PointH> listPointHarris(Mat img, vector<Mat> &pyramid);
+vector<HarrisPoint> listPointHarris(Mat img, vector<Mat> &pyramid);
 
-void drawCircles(Mat img, vector<PointH> pHarris, int level = -1);
+void drawCircles(Mat img, vector<HarrisPoint> pHarris, int level = -1);
 
-void refinePoints(vector<Mat> pyramid, vector<PointH> &pHarris);
+void refinePoints(vector<Mat> pyramid, vector<HarrisPoint> &pHarris);
 
-void refinePoints(Mat img, vector<PointH> &pHarris, int level = -1);
+void refinePoints(Mat img, vector<HarrisPoint> &pHarris, int level = -1);
 
-void calculateOrientation(Mat img, vector<PointH> &pHarris);
+void calculateOrientation(Mat img, vector<HarrisPoint> &pHarris);
 
-void calculateOrientation2(Mat img, vector<PointH> &pHarris);
+void calculateOrientation2(Mat img, vector<HarrisPoint> &pHarris);
 
-void drawRegions(Mat img, vector<PointH> &pHarris);
+void drawRegions(Mat img, vector<HarrisPoint> &pHarris);
 
-void detectHarris(Mat img);
+void detectHarris(const Mat &img, vector<HarrisPoint> &pHarris);
 
-void detectSIFT(Mat &img, vector<KeyPoint> &keypoints);
+void detectSIFT(const Mat &img, vector<KeyPoint> &keypoints);
 
-void detectSURF(Mat &img, vector<KeyPoint> &keypoints);
+void detectSURF(const Mat &img, vector<KeyPoint> &keypoints);
 
-void computeMatching(Mat img1, Mat img2,vector<KeyPoint>& keypoints1,vector<KeyPoint>& keypoints2, vector<DMatch>& matches, METHOD method);
+void drawKeyPoints(const Mat &img, const vector<KeyPoint> &keypoint);
 
-Mat computeMosaic(Mat &img1, Mat &img2);
+void computeMatching(const Mat &img1, const Mat &img2, vector<KeyPoint> &keypoints1, vector<KeyPoint> &keypoints2, vector<DMatch> &matches, METHOD method);
 
-Mat computePanorama(vector<Mat> imgs);
+void drawImageMatches(const Mat &img1, const vector<KeyPoint> &keypoints1, const Mat &img2, const vector<KeyPoint> &keypoints2, const vector<DMatch> &matches);
+
+Mat computeMosaic(const Mat &img1, const Mat &img2);
+
+Mat computePanorama(const vector<Mat> &imgs);
 
 void cropBlackArea(Mat &img);
 
