@@ -37,14 +37,14 @@ class HarrisPoint
 		valorH = _valorH;
 	}
 
-	bool operator <(const HarrisPoint & pt) const
+	bool operator <(const HarrisPoint &point) const
 	{
-		return valorH < pt.valorH;
+		return valorH < point.valorH;
 	}
 
-	bool operator >(const HarrisPoint & pt) const
+	bool operator >(const HarrisPoint &point) const
 	{
-		return valorH > pt.valorH;
+		return valorH > point.valorH;
 	}
 };
 
@@ -61,15 +61,13 @@ void adaptativeNonMaximalSupression(const Mat &MatrixHarris, int entornoSize, in
 
 void listHarrisPoints(const Mat &img, const vector<Mat> &pyramid, vector<HarrisPoint> &result);
 
-void drawCircles(Mat img, vector<HarrisPoint> pHarris, int level = -1);
+void drawCircles(Mat &img, vector<HarrisPoint> pHarris, int level = -1);
 
 void refinePoints(vector<Mat> pyramid, vector<HarrisPoint> &pHarris);
 
-void refinePoints(Mat img, vector<HarrisPoint> &pHarris, int level = -1);
+void refinePoints(const Mat &img, vector<HarrisPoint> &pHarris, int level = -1);
 
-void calculateOrientation(Mat img, vector<HarrisPoint> &pHarris);
-
-void calculateOrientation2(Mat img, vector<HarrisPoint> &pHarris);
+void calculateOrientation(const Mat &img, vector<HarrisPoint> &pHarris);
 
 void detectHarris(const Mat &img, vector<HarrisPoint> &pHarris);
 

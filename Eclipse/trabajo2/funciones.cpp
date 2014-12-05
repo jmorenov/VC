@@ -32,14 +32,12 @@ using namespace std;
 using namespace cv;
 
 /**
- * fH = L1*L2 - k * ((L1+L2)^2) = det(H) - k * tr(H)^2
- * k = 0.04
+ * Funciones Trabajo 2.
  */
-double HarrisPixel(Vec3d p)
-{
-	return ((p[0] * p[1]) - (0.04 * ((p[0] + p[1]) * (p[0] + p[1]))));
-}
 
+/**
+ * Calcula una lista de Mat mediante el médoto de la pirámide Gaussiana de una imagen.
+ */
 vector<Mat> pyramidGaussianList(const Mat &img, int levels)
 {
 	vector<Mat> pyramid;
@@ -53,44 +51,59 @@ vector<Mat> pyramidGaussianList(const Mat &img, int levels)
 	return pyramid;
 }
 
+
+/**
+ * Genera una lista de puntos de Harris de una lista de Mat.
+ */
 void listHarrisPoints(const Mat &img, const vector<Mat> &pyramid, vector<HarrisPoint> &result)
 {
 	vector<HarrisPoint> pHarris, aux;
-	Mat MatrixHarris;
+	Mat MatrixHarris, Mc;
 	for (unsigned int k = 0; k < pyramid.size(); k++)
 	{
+		MatrixHarris = Mat::zeros(img.size(), CV_32FC(6));
+		Mc = Mat::zeros(img.size(), CV_32FC1);
+
 		cornerEigenValsAndVecs(pyramid[k], MatrixHarris, BLOCKSIZE, KSIZE);
 
 		for (int i = 0; i < MatrixHarris.rows; i++)
 		{
 			for (int j = 0; j < MatrixHarris.cols; j++)
 			{
-				MatrixHarris.at<double>(i, j) = HarrisPixel(MatrixHarris.at<Vec3d>(i, j));
+				float lambda_1 = MatrixHarris.at<Vec6f>(i, j)[0];
+				float lambda_2 = MatrixHarris.at<Vec6f>(i, j)[1];
+				Mc.at<float>(i,j) = lambda_1*lambda_2 - 0.04f*pow((lambda_1 + lambda_2 ), 2);
 			}
 		}
-		adaptativeNonMaximalSupression(MatrixHarris, 5, k, aux);
+		adaptativeNonMaximalSupression(Mc, 5, k, aux);
 		pHarris.insert(pHarris.end(), aux.begin(), aux.end());
 	}
 
 	sort(pHarris.begin(), pHarris.end());
-	unsigned int n_points = max(1000, (int)pHarris.size());
+	unsigned int n_points = min(1000, (int)pHarris.size());
 	for (unsigned int i = 0; i < n_points; i++)
 	{
 		result.push_back(pHarris[pHarris.size() - i - 1]);
 	}
 }
 
-void adaptativeNonMaximalSupression(const Mat &MatrixHarris, int entornoSize, int level, vector<HarrisPoint> &pHarris)
+/**
+ * Falta por implementar.
+ */
+void adaptativeNonMaximalSupression(const Mat &puntosHarrys, int tamanoVentana, int nivel, vector<HarrisPoint> &resultado)
 {
-	for(int i=0; i < MatrixHarris.rows; i++)
+	for(int i=0; i<puntosHarrys.rows; i++)
 	{
-		for(int j=0; j < MatrixHarris.cols; j++)
+		for(int j=0; j<puntosHarrys.cols; j++)
 		{
-			pHarris.push_back(HarrisPoint(Point(j, i), level, MatrixHarris.at<double>(i, j)));
+			resultado.push_back(HarrisPoint(Point(j,i), nivel, puntosHarrys.at<double>(i,i)));
 		}
 	}
 }
 
+/**
+ * Comprueba si la imagen es en color.
+ */
 bool checkColor(Mat img)
 {
 	if (img.type() >= 8)
@@ -98,31 +111,42 @@ bool checkColor(Mat img)
 	return false;
 }
 
+/**
+ * Convierte una imagen a blanco y negro.
+ */
 void convertToGray(Mat &img)
 {
 	cvtColor(img, img, CV_RGB2GRAY);
 }
 
+/**
+ * Comprueba si una imagen es en color y la convierte a blanco y negro.
+ */
 void convertToGrayIfColor(Mat &img)
 {
 	if(checkColor(img))
 		convertToGray(img);
 }
 
+/**
+ * Refina una lista de puntos de Harris de una lista de Mat.
+ */
 void refinePoints(vector<Mat> pyramid, vector<HarrisPoint> &pHarris)
 {
 	for (unsigned int i = 0; i < pyramid.size(); i++)
 		refinePoints(pyramid[i], pHarris, i);
 }
 
-void refinePoints(Mat img, vector<HarrisPoint> &pHarris, int level)
+/**
+ * Refina una lista de puntos de Harris de un Mat.
+ */
+void refinePoints(const Mat &img, vector<HarrisPoint> &pHarris, int level)
 {
 	vector<Point2f> pSubPix;
 	for (unsigned int i = 0; i < pHarris.size(); i++)
 		if (pHarris[i].level == level || level == -1)
 			pSubPix.push_back(pHarris[i].p);
 
-	// ¿Porque?
 	cornerSubPix(img, pSubPix, Size(5, 5), Size(-1, -1),
 			TermCriteria( CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 40, 0.001));
 
@@ -132,34 +156,9 @@ void refinePoints(Mat img, vector<HarrisPoint> &pHarris, int level)
 }
 
 /**
- * CAMBIAR!! y REVISAR!!
+ * Calcula la orientación de una lista de puntos de Harris en una imagen.
  */
-void calculateOrientation2(vector<Mat> pyramid, vector<HarrisPoint> &pHarris)
-{
-	Mat sobelX, sobelY;
-	double deltaX = 0, deltaY = 0;
-	for (unsigned int k = 0; k < pyramid.size(); k++)
-	{
-		Sobel(pyramid[k], sobelX, CV_64F, 1, 0, 3, k + 1);
-		Sobel(pyramid[k], sobelY, CV_64F, 0, 1, 3, k + 1);
-		for (unsigned int i = 0; i < pHarris.size(); i++)
-		{
-			if ((unsigned) pHarris[i].level == k)
-			{
-				//cout<<k<<" "<<i<<" "<<sobelX.rows<<" "<<sobelX.cols<<" "<<pHarris[i].p.x<<" "<<pHarris[i].p.y<<" "<<deltaX<<" "<<deltaY<<endl;
-				deltaX = sobelX.at<double>(pHarris[i].p);
-				deltaY = sobelY.at<double>(pHarris[i].p.y, pHarris[i].p.x);
-				if (deltaX == 0)
-					pHarris[i].orientation = 0;
-				else
-					pHarris[i].orientation = atan(
-							(deltaY / deltaX) * (180.0 / M_PIl));
-			}
-		}
-	}
-}
-
-void calculateOrientation(Mat img, vector<HarrisPoint> &pHarris)
+void calculateOrientation(const Mat &img, vector<HarrisPoint> &pHarris)
 {
 	Mat sobelX, sobelY;
 	double deltaX = 0, deltaY = 0;
@@ -176,22 +175,23 @@ void calculateOrientation(Mat img, vector<HarrisPoint> &pHarris)
 	}
 }
 
+/**
+ * Función para detectar los puntos de Harris en una imagen.
+ */
 void detectHarris(const Mat &img, vector<HarrisPoint> &pHarris)
 {
 	Mat img_gray = img.clone();
 	convertToGrayIfColor(img_gray);
 	vector<Mat> pyramid = pyramidGaussianList(img_gray, 4);
 	listHarrisPoints(img_gray, pyramid, pHarris);
-	//refinePoints(pyramid, pHarris);
 	refinePoints(img_gray, pHarris);
-	//calculateOrientation(pyramid, point_harris);
 	calculateOrientation(img_gray, pHarris);
 }
 
 /**
- * CAMBIAR POR CRUCES/MARCAS.
+ * Dibuja círculos en los puntos de Harris definidos.
  */
-void drawCircles(Mat img, vector<HarrisPoint> pHarris, int level)
+void drawCircles(Mat &img, vector<HarrisPoint> pHarris, int level)
 {
 	Scalar color = Scalar(185, 174, 255);
 	for (unsigned int i = 0; i < pHarris.size(); i++)
@@ -201,6 +201,9 @@ void drawCircles(Mat img, vector<HarrisPoint> pHarris, int level)
 	}
 }
 
+/**
+ * Pinta los puntos de Harris en una imagen.
+ */
 void drawHarrisPoints(const Mat &img, const vector<HarrisPoint> &pHarris)
 {
 	Mat img_original = img.clone();
@@ -209,7 +212,7 @@ void drawHarrisPoints(const Mat &img, const vector<HarrisPoint> &pHarris)
 }
 
 /**
- * CAMBIAR!! 
+ * Pinta las regiones relevantes en una imagen.
  */
 void drawHarrisRegions(const Mat &img, const vector<HarrisPoint> &pHarris)
 {
@@ -234,8 +237,6 @@ void drawHarrisRegions(const Mat &img, const vector<HarrisPoint> &pHarris)
 			break;
 		}
 		radio = (pHarris[i].level + 1) * 6;
-		//circle(img, pHarris[i].p, radio, color, 1);
-		cout << pHarris[i].orientation << endl;
 		RotatedRect rRect = RotatedRect(pHarris[i].p, Size(radio, radio),
 				pHarris[i].orientation);
 		Rect brect = rRect.boundingRect();
@@ -248,6 +249,9 @@ void drawHarrisRegions(const Mat &img, const vector<HarrisPoint> &pHarris)
 	pintaI(img_original);
 }
 
+/**
+ * Detector SIFT.
+ */
 void detectSIFT(const Mat &img, vector<KeyPoint> &keypoints)
 {
 	/*int nfeatures = 0;
@@ -262,6 +266,9 @@ void detectSIFT(const Mat &img, vector<KeyPoint> &keypoints)
 	detector.operator()(img_original, Mat(), keypoints);
 }
 
+/**
+ * Detector SURF.
+ */
 void detectSURF(const Mat &img, vector<KeyPoint> &keypoints)
 {
 	/*double hessianThreshold = 1;
@@ -275,6 +282,9 @@ void detectSURF(const Mat &img, vector<KeyPoint> &keypoints)
 	detector.operator()(img_original, Mat(), keypoints);
 }
 
+/**
+ * Pinta una lista de KeyPoint en una imagen.
+ */
 void drawKeyPoints(const Mat &img, const vector<KeyPoint> &keypoints)
 {
 	Mat img_original = img.clone();
@@ -282,6 +292,9 @@ void drawKeyPoints(const Mat &img, const vector<KeyPoint> &keypoints)
 	pintaI(img_original);
 }
 
+/**
+ * Calcula la correspondencia entre dos im
+ */
 void computeMatching(const Mat &img1, const Mat &img2, vector<KeyPoint> &keypoints1,
 		vector<KeyPoint> &keypoints2, vector<DMatch> &matches, METHOD method)
 {
@@ -343,6 +356,9 @@ void computeMatching(const Mat &img1, const Mat &img2, vector<KeyPoint> &keypoin
 	matcher.match(descriptors1, descriptors2, matches);
 }
 
+/**
+ * Pinta en una imagen la correspondencia entre dos imágenes.
+ */
 void drawImageMatches(const Mat &img1, const vector<KeyPoint> &keypoints1, const Mat &img2, const vector<KeyPoint> &keypoints2, const vector<DMatch> &matches)
 {
 	Mat image;
@@ -350,6 +366,9 @@ void drawImageMatches(const Mat &img1, const vector<KeyPoint> &keypoints1, const
 	pintaI(image);
 }
 
+/**
+ * Genera un mosaico entre dos imágenes.
+ */
 Mat computeMosaic(const Mat &img1, const Mat &img2)
 {
 	vector<KeyPoint> keypoints1, keypoints2;
@@ -375,6 +394,9 @@ Mat computeMosaic(const Mat &img1, const Mat &img2)
 	return img_mosaic;
 }
 
+/**
+ * Genera una vista panorámica entre una lista de imágenes.
+ */
 Mat computePanorama(const vector<Mat> &imgs)
 {
 	assert(imgs.size() >= 2);
@@ -388,6 +410,9 @@ Mat computePanorama(const vector<Mat> &imgs)
 	return panorama;
 }
 
+/**
+ * Elimina de una imagen las zonas en negro, útil para la generación de mosaicos y panorámicas.
+ */
 void cropBlackArea(Mat &img)
 {
 	vector<Point> nonBlackList;
@@ -404,6 +429,10 @@ void cropBlackArea(Mat &img)
 
 	img = img(bb);
 }
+
+/**
+ * Funciones Trabajo 1.
+ */
 
 /**
  * Genera una ventana en la que pinta la imagen que se pasa en img.

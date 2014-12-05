@@ -28,19 +28,19 @@ int main(int argc, char* argv[])
 	cout << "Inicio Trabajo 2." << endl;
 	vector<string> imgs;
 	imgs.push_back("imagenes/yosemite_full/yosemite1.jpg");
-	//imgs.push_back("imagenes/yosemite_full/yosemite2.jpg");
-	//imgs.push_back("imagenes/yosemite_full/yosemite3.jpg");
-	//imgs.push_back("imagenes/yosemite_full/yosemite4.jpg");
-	//imgs.push_back("imagenes/yosemite_full/yosemite5.jpg");
-	//imgs.push_back("imagenes/yosemite_full/yosemite6.jpg");
-	//imgs.push_back("imagenes/yosemite_full/yosemite7.jpg");
+	imgs.push_back("imagenes/yosemite_full/yosemite2.jpg");
+	imgs.push_back("imagenes/yosemite_full/yosemite3.jpg");
+	imgs.push_back("imagenes/yosemite_full/yosemite4.jpg");
+	imgs.push_back("imagenes/yosemite_full/yosemite5.jpg");
+	imgs.push_back("imagenes/yosemite_full/yosemite6.jpg");
+	imgs.push_back("imagenes/yosemite_full/yosemite7.jpg");
 
 	vector<Mat> images(imgs.size());
 	readImages(imgs, images);
 	ejercicio1(images);
-	//ejercicio2(images);
-	//ejercicio3(images);
-	//ejercicio4(images);
+	ejercicio2(images);
+	ejercicio3(images);
+	ejercicio4(images);
 
 	cout << "Fin Trabajo 2." << endl;
 	return 0;
