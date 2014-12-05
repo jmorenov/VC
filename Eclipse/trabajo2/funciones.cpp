@@ -302,7 +302,7 @@ void detectHarris(const Mat &img, vector<HarrisPoint> &pHarris)
 	calculateOrientation(img_gray, point_harris);
 }
 
-void drawHarrisPoints(const Mat &img, vector<HarrisPoint> &pHarris)
+void drawHarrisPoints(const Mat &img, const vector<HarrisPoint> &pHarris)
 {
 	Mat img_original = img;
 	drawCircles(img_original, pHarris);
@@ -312,7 +312,7 @@ void drawHarrisPoints(const Mat &img, vector<HarrisPoint> &pHarris)
 /**
  * CAMBIAR!! 
  */
-void drawHarrisRegions(const Mat &img, vector<HarrisPoint> &pHarris)
+void drawHarrisRegions(const Mat &img, const vector<HarrisPoint> &pHarris)
 {
 	Mat img_original = img;
 	double radio;
