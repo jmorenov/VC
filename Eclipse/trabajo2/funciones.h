@@ -42,7 +42,7 @@ struct PointH
 		}
 };
 
-enum METHOD { SIFT_M, SURF_M, HARRIS };
+enum METHOD { SIFT_AUTO, SURF_AUTO, SIFT_M, SURF_M, HARRIS };
 
 double HarrisPixel(Vec3d p);
 
@@ -68,9 +68,9 @@ void drawRegions(Mat img, vector<PointH> &pHarris);
 
 void detectHarris(Mat img);
 
-void detectSIFT(Mat img, vector<KeyPoint> &keypoints);
+void detectSIFT(Mat &img, vector<KeyPoint> &keypoints);
 
-void detectSURF(Mat img, vector<KeyPoint> &keypoints);
+void detectSURF(Mat &img, vector<KeyPoint> &keypoints);
 
 void computeMatching(Mat img1, Mat img2,vector<KeyPoint>& keypoints1,vector<KeyPoint>& keypoints2, vector<DMatch>& matches, METHOD method);
 

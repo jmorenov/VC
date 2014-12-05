@@ -338,7 +338,7 @@ void detectHarris(Mat img)
 	drawRegions(img_original, point_harris);
 }
 
-void detectSIFT(Mat img, vector<KeyPoint> &keypoints)
+void detectSIFT(Mat &img, vector<KeyPoint> &keypoints)
 {
 	/*int nfeatures = 0;
 	 int nOctaves = 4;
@@ -350,10 +350,9 @@ void detectSIFT(Mat img, vector<KeyPoint> &keypoints)
 	SIFT detector = SIFT(); // Parámetros por defecto.
 	detector.operator()(img, Mat(), keypoints);
 	drawKeypoints(img, keypoints, img);
-	pintaI(img);
 }
 
-void detectSURF(Mat img, vector<KeyPoint> &keypoints)
+void detectSURF(Mat &img, vector<KeyPoint> &keypoints)
 {
 	/*double hessianThreshold = 1;
 	 int nOctaves = 4;
@@ -364,16 +363,36 @@ void detectSURF(Mat img, vector<KeyPoint> &keypoints)
 	SURF detector = SURF(); // Parámetros por defecto.
 	detector.operator()(img, Mat(), keypoints);
 	drawKeypoints(img, keypoints, img);
-	pintaI(img);
 }
 
 void computeMatching(Mat img1, Mat img2, vector<KeyPoint> &keypoints1,
 		vector<KeyPoint> &keypoints2, vector<DMatch> &matches, METHOD method)
 {
-	if(checkColor(img1)) img1 = convertToGray(img1);
-	if(checkColor(img2)) img2 = convertToGray(img2);
+	if (checkColor(img1))
+		img1 = convertToGray(img1);
+	if (checkColor(img2))
+		img2 = convertToGray(img2);
 	Mat descriptors1, descriptors2;
+
 	if (method == SIFT_M)
+	{
+		SiftDescriptorExtractor extractor;
+		detectSIFT(img1, keypoints1);
+		detectSIFT(img2, keypoints2);
+		// computing descriptors
+		extractor.compute(img1, keypoints1, descriptors1);
+		extractor.compute(img2, keypoints2, descriptors2);
+	}
+	else if (method == SURF_M)
+	{
+		SurfDescriptorExtractor extractor;
+		detectSURF(img1, keypoints1);
+		detectSURF(img2, keypoints2);
+		// computing descriptors
+		extractor.compute(img1, keypoints1, descriptors1);
+		extractor.compute(img2, keypoints2, descriptors2);
+	}
+	else if (method == SIFT_AUTO)
 	{
 		SiftDescriptorExtractor extractor;
 		SiftFeatureDetector detector(400);
@@ -384,11 +403,10 @@ void computeMatching(Mat img1, Mat img2, vector<KeyPoint> &keypoints1,
 			detector.detect(img2, keypoints2);
 		}
 		// computing descriptors
-
 		extractor.compute(img1, keypoints1, descriptors1);
 		extractor.compute(img2, keypoints2, descriptors2);
 	}
-	else
+	else //SURF_AUTO
 	{
 		SurfFeatureDetector detector(400);
 		SurfDescriptorExtractor extractor;
@@ -399,7 +417,6 @@ void computeMatching(Mat img1, Mat img2, vector<KeyPoint> &keypoints1,
 			detector.detect(img2, keypoints2);
 		}
 		// computing descriptors
-
 		extractor.compute(img1, keypoints1, descriptors1);
 		extractor.compute(img2, keypoints2, descriptors2);
 	}
@@ -413,7 +430,7 @@ Mat computeMosaic(Mat &img1, Mat &img2)
 {
 	vector<KeyPoint> keypoints1, keypoints2;
 	vector<DMatch> matches;
-	computeMatching(img1, img2, keypoints1, keypoints2, matches, SURF_M);
+	computeMatching(img1, img2, keypoints1, keypoints2, matches, SURF_AUTO);
 
 	Mat img_mosaic;
 	vector<Point2f> p1, p2;
@@ -424,7 +441,8 @@ Mat computeMosaic(Mat &img1, Mat &img2)
 	}
 
 	Mat H = findHomography(p1, p2, CV_RANSAC);
-	warpPerspective(img2, img_mosaic, H, Size(img1.cols+img2.cols, img1.rows));
+	warpPerspective(img2, img_mosaic, H,
+			Size(img1.cols + img2.cols, img1.rows));
 	Mat half(img_mosaic, Rect(0, 0, img1.cols, img1.rows));
 	img1.copyTo(half);
 
@@ -433,26 +451,15 @@ Mat computeMosaic(Mat &img1, Mat &img2)
 	return img_mosaic;
 }
 
-/**
- * NO FUNCIONA.
- */
 Mat computePanorama(vector<Mat> imgs)
 {
 	assert(imgs.size() >= 2);
 
 	Mat panorama = computeMosaic(imgs[0], imgs[1]);
-	for(unsigned int i=2; i<imgs.size(); i++)
+	for (unsigned int i = 2; i < imgs.size(); i++)
 	{
 		panorama = computeMosaic(panorama, imgs[i]);
 	}
-
-	/*Mat panorama1 = computeMosaic(imgs[0], imgs[1]);
-	Mat panorama2 = computeMosaic(imgs[2], imgs[3]);
-	Mat panorama3 = computeMosaic(imgs[4], imgs[5]);
-	//Mat panorama4 = computeMosaic(panorama3, imgs[5]);
-	Mat panorama1_12 = computeMosaic(panorama1, panorama2);
-	//Mat panorama2_34 = computeMosaic(panorama3, panorama4);
-	Mat panorama = computeMosaic(panorama1_12, panorama3);*/
 
 	return panorama;
 }
@@ -473,7 +480,6 @@ void cropBlackArea(Mat &img)
 
 	img = img(bb);
 }
-
 
 /**
  * Genera una ventana en la que pinta la imagen que se pasa en img.
