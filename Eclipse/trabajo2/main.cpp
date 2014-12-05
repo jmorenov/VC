@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 	cout<<"Finalizada lectura de imágenes."<<endl;
 	
 	// Ejercicio 1: Detección de puntos Harris multiescala.
-	vector<PointHarris> pointharris;
+	vector<HarrisPoint> pointharris;
 	cout<<"Ejercicio 1:"<<endl;
 	cout<<"Detectando Puntos Harris..."<<endl;
 	for(unsigned int i = 0; i < imgs.size(); i++)
