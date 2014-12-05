@@ -93,13 +93,13 @@ vector<Mat> pyramidGaussianList(Mat imagen, int niveles)
  * CAMBIAR!!
  */
 //vector<PointH> adaptativeNonMaximalSupression(Mat entornoHarris, int entornoSize, int level)
-vector<PointH> adaptativeNonMaximalSupression(Mat puntosHarrys,
+vector<HarrisPoint> adaptativeNonMaximalSupression(Mat puntosHarrys,
 		int tamanoVentana, int nivel)
 {
 	Mat binaria;
 	binaria = binaria.zeros(puntosHarrys.rows, puntosHarrys.cols, CV_8UC1);
 	Mat aux;
-	vector<PointH> resultado;
+	vector<HarrisPoint> resultado;
 	double max;
 	bool esMax;
 	for (int i = 0; i < puntosHarrys.rows - tamanoVentana; i++)
@@ -147,7 +147,7 @@ vector<PointH> adaptativeNonMaximalSupression(Mat puntosHarrys,
 			if (binaria.at<unsigned char>(i, j) == 1)
 			{
 				resultado.push_back(
-						PointH(Point(j, i), nivel,
+						HarrisPoint(Point(j, i), nivel,
 								puntosHarrys.at<double>(i, j)));
 			}
 		}
@@ -158,9 +158,9 @@ vector<PointH> adaptativeNonMaximalSupression(Mat puntosHarrys,
 /**
  * CAMBIAR!!
  */
-vector<PointH> listPointHarris(Mat img, vector<Mat> &pyramid)
+vector<HarrisPoint> listPointHarris(Mat img, vector<Mat> &pyramid)
 {
-	vector<PointH> pHarris, maximos, aux;
+	vector<HarrisPoint> pHarris, maximos, aux;
 
 	Mat eigenValuesH;
 	for (unsigned int k = 0; k < pyramid.size(); k++)
@@ -193,7 +193,7 @@ vector<PointH> listPointHarris(Mat img, vector<Mat> &pyramid)
 	return maximos;
 }
 
-void drawCircles(Mat img, vector<PointH> pHarris, int level)
+void drawCircles(Mat img, vector<HarrisPoint> pHarris, int level)
 {
 	Scalar color = Scalar(185, 174, 255);
 	for (unsigned int i = 0; i < pHarris.size(); i++)
@@ -206,27 +206,30 @@ void drawCircles(Mat img, vector<PointH> pHarris, int level)
 
 bool checkColor(Mat img)
 {
-	/*cout<<"Type: "<<img.type()<<endl;
-	 cout<<"Channels: "<<img.channels()<<endl;*/
 	if (img.type() >= 8)
 		return true;
 	return false;
 }
 
-Mat convertToGray(Mat img)
+void convertToGray(Mat &img)
 {
 	cvtColor(img, img, CV_RGB2GRAY);
-	//img.convertTo(img, CV_8UC1);
 	return img;
 }
 
-void refinePoints(vector<Mat> pyramid, vector<PointH> &pHarris)
+void convertToGrayIfColor(Mat &img)
+{
+	if(!checkColor(img))
+		convertToGray(img);
+}
+
+void refinePoints(vector<Mat> pyramid, vector<HarrisPoint> &pHarris)
 {
 	for (unsigned int i = 0; i < pyramid.size(); i++)
 		refinePoints(pyramid[i], pHarris, i);
 }
 
-void refinePoints(Mat img, vector<PointH> &pHarris, int level)
+void refinePoints(Mat img, vector<HarrisPoint> &pHarris, int level)
 {
 	vector<Point2f> pSubPix;
 	for (unsigned int i = 0; i < pHarris.size(); i++)
@@ -245,7 +248,7 @@ void refinePoints(Mat img, vector<PointH> &pHarris, int level)
 /**
  * CAMBIAR!! y REVISAR!!
  */
-void calculateOrientation2(vector<Mat> pyramid, vector<PointH> &pHarris)
+void calculateOrientation2(vector<Mat> pyramid, vector<HarrisPoint> &pHarris)
 {
 	Mat sobelX, sobelY;
 	double deltaX = 0, deltaY = 0;
@@ -270,7 +273,7 @@ void calculateOrientation2(vector<Mat> pyramid, vector<PointH> &pHarris)
 	}
 }
 
-void calculateOrientation(Mat img, vector<PointH> &pHarris)
+void calculateOrientation(Mat img, vector<HarrisPoint> &pHarris)
 {
 	Mat sobelX, sobelY;
 	double deltaX = 0, deltaY = 0;
@@ -287,8 +290,31 @@ void calculateOrientation(Mat img, vector<PointH> &pHarris)
 	}
 }
 
-void drawRegions(Mat img, vector<PointH> &pHarris)
+void detectHarris(const Mat &img, vector<HarrisPoint> &pHarris)
 {
+	Mat img_gray = img;
+	convertToGrayIfColor(img_gray);
+	vector<Mat> pyramid = pyramidGaussianList(img_gray, 4);
+	vector<HarrisPoint> point_harris = listPointHarris(img_gray, pyramid);
+	//refinePoints(pyramid, point_harris);
+	refinePoints(img_gray, point_harris);
+	//calculateOrientation(pyramid, point_harris);
+	calculateOrientation(img_gray, point_harris);
+}
+
+void drawHarrisPoints(const Mat &img, vector<HarrisPoint> &pHarris)
+{
+	Mat img_original = img;
+	drawCircles(img_original, pHarris);
+	pintaI(img_original);
+}
+
+/**
+ * CAMBIAR!! 
+ */
+void drawHarrisRegions(const Mat &img, vector<HarrisPoint> &pHarris)
+{
+	Mat img_original = img;
 	double radio;
 	Scalar color;
 	for (unsigned int i = 0; i < pHarris.size(); i++)
@@ -314,37 +340,16 @@ void drawRegions(Mat img, vector<PointH> &pHarris)
 		RotatedRect rRect = RotatedRect(pHarris[i].p, Size(radio, radio),
 				pHarris[i].orientation);
 		Rect brect = rRect.boundingRect();
-		rectangle(img, brect, color);
-		line(img, pHarris[i].p,
+		rectangle(img_original, brect, color);
+		line(img_original, pHarris[i].p,
 				Point(pHarris[i].p.x + radio * cos(pHarris[i].orientation),
 						pHarris[i].p.y + radio * sin(pHarris[i].orientation)),
 				color, 2);
 	}
-	pintaI(img);
+	pintaI(img_original);
 }
 
-void detectHarris(Mat img)
-{
-	Mat img_original = img;
-
-	if (checkColor(img))
-		img = convertToGray(img);
-
-	vector<Mat> pyramid = pyramidGaussianList(img, 4);
-	vector<PointH> point_harris = listPointHarris(img, pyramid);
-
-//drawCircles(img_original, point_harris);
-
-//refinePoints(pyramid, point_harris);
-	refinePoints(img, point_harris);
-
-	//calculateOrientation(pyramid, point_harris);
-	calculateOrientation(img, point_harris);
-
-	drawRegions(img_original, point_harris);
-}
-
-void detectSIFT(Mat &img, vector<KeyPoint> &keypoints)
+void detectSIFT(const Mat &img, vector<KeyPoint> &keypoints)
 {
 	/*int nfeatures = 0;
 	 int nOctaves = 4;
@@ -353,9 +358,10 @@ void detectSIFT(Mat &img, vector<KeyPoint> &keypoints)
 	 double edgeThreshold=10;
 	 double sigma = 1.6;
 	 SIFT detector = SIFT(nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma);*/
+	Mat img_original = img;
 	SIFT detector = SIFT(); // Parámetros por defecto.
-	detector.operator()(img, Mat(), keypoints);
-	drawKeypoints(img, keypoints, img);
+	detector.operator()(img_original, Mat(), keypoints);
+	drawKeypoints(img_original, keypoints, img_original);
 }
 
 void detectSURF(Mat &img, vector<KeyPoint> &keypoints)
@@ -366,37 +372,38 @@ void detectSURF(Mat &img, vector<KeyPoint> &keypoints)
 	 bool extended = true;
 	 bool upright = false;
 	 SURF detector = SURF(hessianThreshold, nOctaves, nOctaveLayers, extended, upright);*/
+	Mat img_original = img;
 	SURF detector = SURF(); // Parámetros por defecto.
-	detector.operator()(img, Mat(), keypoints);
-	drawKeypoints(img, keypoints, img);
+	detector.operator()(img_original, Mat(), keypoints);
+	drawKeypoints(img_original, keypoints, img_original);
 }
 
-void computeMatching(Mat img1, Mat img2, vector<KeyPoint> &keypoints1,
+void computeMatching(const Mat &img1, const Mat &img2, vector<KeyPoint> &keypoints1,
 		vector<KeyPoint> &keypoints2, vector<DMatch> &matches, METHOD method)
 {
-	if (checkColor(img1))
-		img1 = convertToGray(img1);
-	if (checkColor(img2))
-		img2 = convertToGray(img2);
+	Mat gray1 = img1;
+	Mat gray2 = img2;
+	convertToGrayIfColor(gray1);
+	convertToGrayIfColor(gray2);
+	
 	Mat descriptors1, descriptors2;
-
 	if (method == SIFT_M)
 	{
 		SiftDescriptorExtractor extractor;
-		detectSIFT(img1, keypoints1);
-		detectSIFT(img2, keypoints2);
+		detectSIFT(gray1, keypoints1);
+		detectSIFT(gray2, keypoints2);
 		// computing descriptors
-		extractor.compute(img1, keypoints1, descriptors1);
-		extractor.compute(img2, keypoints2, descriptors2);
+		extractor.compute(gray1, keypoints1, descriptors1);
+		extractor.compute(gray2, keypoints2, descriptors2);
 	}
 	else if (method == SURF_M)
 	{
 		SurfDescriptorExtractor extractor;
-		detectSURF(img1, keypoints1);
-		detectSURF(img2, keypoints2);
+		detectSURF(gray1, keypoints1);
+		detectSURF(gray2, keypoints2);
 		// computing descriptors
-		extractor.compute(img1, keypoints1, descriptors1);
-		extractor.compute(img2, keypoints2, descriptors2);
+		extractor.compute(gray1, keypoints1, descriptors1);
+		extractor.compute(gray2, keypoints2, descriptors2);
 	}
 	else if (method == SIFT_AUTO)
 	{
@@ -405,12 +412,12 @@ void computeMatching(Mat img1, Mat img2, vector<KeyPoint> &keypoints1,
 		// detecting keypoints
 		if (keypoints1.empty() || keypoints2.empty())
 		{
-			detector.detect(img1, keypoints1);
-			detector.detect(img2, keypoints2);
+			detector.detect(gray1, keypoints1);
+			detector.detect(gray2, keypoints2);
 		}
 		// computing descriptors
-		extractor.compute(img1, keypoints1, descriptors1);
-		extractor.compute(img2, keypoints2, descriptors2);
+		extractor.compute(gray1, keypoints1, descriptors1);
+		extractor.compute(gray2, keypoints2, descriptors2);
 	}
 	else //SURF_AUTO
 	{
@@ -419,12 +426,12 @@ void computeMatching(Mat img1, Mat img2, vector<KeyPoint> &keypoints1,
 		// detecting keypoints
 		if (keypoints1.empty() || keypoints2.empty())
 		{
-			detector.detect(img1, keypoints1);
-			detector.detect(img2, keypoints2);
+			detector.detect(gray1, keypoints1);
+			detector.detect(gray2, keypoints2);
 		}
 		// computing descriptors
-		extractor.compute(img1, keypoints1, descriptors1);
-		extractor.compute(img2, keypoints2, descriptors2);
+		extractor.compute(gray1, keypoints1, descriptors1);
+		extractor.compute(gray2, keypoints2, descriptors2);
 	}
 
 	// matching descriptors
@@ -432,7 +439,14 @@ void computeMatching(Mat img1, Mat img2, vector<KeyPoint> &keypoints1,
 	matcher.match(descriptors1, descriptors2, matches);
 }
 
-Mat computeMosaic(Mat &img1, Mat &img2)
+void drawImageMatches(const Mat &img1, const vector<KeyPoint> &keypoints1, const Mat &img2, const vector<KeyPoint> &keypoints2, const vector<DMatch> &matches)
+{
+	Mat image;
+	drawMatches(img1, keypoints1, img2, keypoints2, matches, image);
+	pintaI(image);
+}
+
+Mat computeMosaic(const Mat &img1, const Mat &img2)
 {
 	vector<KeyPoint> keypoints1, keypoints2;
 	vector<DMatch> matches;
@@ -457,7 +471,7 @@ Mat computeMosaic(Mat &img1, Mat &img2)
 	return img_mosaic;
 }
 
-Mat computePanorama(vector<Mat> imgs)
+Mat computePanorama(const vector<Mat> &imgs)
 {
 	assert(imgs.size() >= 2);
 
@@ -472,17 +486,17 @@ Mat computePanorama(vector<Mat> imgs)
 
 void cropBlackArea(Mat &img)
 {
-	std::vector<cv::Point> nonBlackList;
+	vector<Point> nonBlackList;
 	nonBlackList.reserve(img.rows * img.cols);
 	for (int j = 0; j < img.rows; ++j)
 		for (int i = 0; i < img.cols; ++i)
 		{
-			if (img.at<cv::Vec3b>(j, i) != cv::Vec3b(0, 0, 0))
+			if (img.at<Vec3b>(j, i) != Vec3b(0, 0, 0))
 			{
-				nonBlackList.push_back(cv::Point(i, j));
+				nonBlackList.push_back(Point(i, j));
 			}
 		}
-	Rect bb = cv::boundingRect(nonBlackList);
+	Rect bb = boundingRect(nonBlackList);
 
 	img = img(bb);
 }
