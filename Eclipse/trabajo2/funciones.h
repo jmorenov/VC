@@ -70,9 +70,11 @@ void calculateOrientation(Mat img, vector<HarrisPoint> &pHarris);
 
 void calculateOrientation2(Mat img, vector<HarrisPoint> &pHarris);
 
-void drawRegions(Mat img, vector<HarrisPoint> &pHarris);
-
 void detectHarris(const Mat &img, vector<HarrisPoint> &pHarris);
+
+void drawHarrisPoints(const Mat &img, const vector<HarrisPoint> &pHarris);
+
+void drawHarrisRegions(const Mat &img, const vector<HarrisPoint> &pHarris);
 
 void detectSIFT(const Mat &img, vector<KeyPoint> &keypoints);
 
