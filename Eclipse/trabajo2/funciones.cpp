@@ -40,168 +40,55 @@ double HarrisPixel(Vec3d p)
 	return ((p[0] * p[1]) - (0.04 * ((p[0] + p[1]) * (p[0] + p[1]))));
 }
 
-vector<Mat> pyramidGaussianList2(Mat img, int levels)
+vector<Mat> pyramidGaussianList(const Mat &img, int levels)
 {
 	vector<Mat> pyramid;
-	for (int i = 0; i < levels; i++)
+	Mat img_aux = img.clone();
+	pyramid.push_back(img);
+	for (int i = 1; i < levels; i++)
 	{
-		pyrDown(img, img);
-		pyramid.push_back(img);
+		pyrDown(img_aux, img_aux);
+		pyramid.push_back(img_aux);
 	}
 	return pyramid;
 }
 
-/**
- * CAMBIAR!!
- */
-vector<Mat> pyramidGaussianList(Mat imagen, int niveles)
+void listHarrisPoints(const Mat &img, const vector<Mat> &pyramid, vector<HarrisPoint> &result)
 {
-	//Matriz auxiliar para hacer las concatenaciones con la imagen original
-	Mat aux((imagen.rows / 2), (imagen.cols / 2), CV_64FC3, 0.0);
-	Mat alisada;
-
-	vector<Mat> salida;
-	//Actulizamos la imagen
-	imagen.copyTo(alisada);
-	salida.push_back(imagen);
-	//Para cada nivel
-	for (int i = 1; i < niveles; i++)
-	{
-		alisada.convertTo(alisada, CV_8U);
-		//Aplicamos la convolucion a la imagen
-		alisada = filterGauss(alisada, 2.0);
-		//Submuestreamos
-		for (int j = 0; j < aux.rows; j++)
-		{
-			for (int k = 0; k < aux.cols; k++)
-			{
-				aux.at<Vec3d>(j, k) = alisada.at<Vec3d>(j * 2, k * 2);
-			}
-		}
-		aux.copyTo(alisada);
-		aux.convertTo(aux, CV_8UC3);
-
-		salida.push_back(aux);
-		//Reseteamos la matriz auxiliar
-		aux = aux.zeros((alisada.rows / 2), (alisada.cols / 2), CV_64FC3);
-	}
-
-	return salida;
-}
-
-/**
- * CAMBIAR!!
- */
-//vector<PointH> adaptativeNonMaximalSupression(Mat entornoHarris, int entornoSize, int level)
-vector<HarrisPoint> adaptativeNonMaximalSupression(Mat puntosHarrys,
-		int tamanoVentana, int nivel)
-{
-	Mat binaria;
-	binaria = binaria.zeros(puntosHarrys.rows, puntosHarrys.cols, CV_8UC1);
-	Mat aux;
-	vector<HarrisPoint> resultado;
-	double max;
-	bool esMax;
-	for (int i = 0; i < puntosHarrys.rows - tamanoVentana; i++)
-	{
-		for (int j = 0; j < puntosHarrys.cols - tamanoVentana; j++)
-		{
-			aux = puntosHarrys(Rect(j, i, tamanoVentana, tamanoVentana));
-			max = aux.at<double>((tamanoVentana / 2) + 1,
-					(tamanoVentana / 2) + 1);
-			esMax = true;
-
-			if (max == 0.0)
-			{
-				esMax = false;
-			}
-
-			if (max < 0.0)
-			{
-				esMax = false;
-			}
-
-			for (int k = 0; k < aux.rows; k++)
-			{
-				for (int l = 0; l < aux.cols; l++)
-				{
-					if (aux.at<double>(k, l) > max)
-					{
-						//cout << max << " " <<
-						esMax = false;
-					}
-				}
-			}
-			if (esMax == true)
-			{
-				binaria.at<unsigned char>(i + (tamanoVentana / 2) + 1,
-						j + (tamanoVentana / 2) + 1) = 1;
-			}
-
-		}
-	}
-	for (int i = 0; i < binaria.rows; i++)
-	{
-		for (int j = 0; j < binaria.cols; j++)
-		{
-			if (binaria.at<unsigned char>(i, j) == 1)
-			{
-				resultado.push_back(
-						HarrisPoint(Point(j, i), nivel,
-								puntosHarrys.at<double>(i, j)));
-			}
-		}
-	}
-	return resultado;
-}
-
-/**
- * CAMBIAR!!
- */
-vector<HarrisPoint> listPointHarris(Mat img, vector<Mat> &pyramid)
-{
-	vector<HarrisPoint> pHarris, maximos, aux;
-
-	Mat eigenValuesH;
+	vector<HarrisPoint> pHarris, aux;
+	Mat MatrixHarris;
 	for (unsigned int k = 0; k < pyramid.size(); k++)
 	{
-		if (pyramid[k].type() != 0)
-		{
-			pyramid[k].convertTo(pyramid[k], CV_8UC3);
-			cvtColor(pyramid[k], pyramid[k], CV_RGB2GRAY);
-		}
-		cornerEigenValsAndVecs(pyramid[k], eigenValuesH, BLOCKSIZE, KSIZE);
+		cornerEigenValsAndVecs(pyramid[k], MatrixHarris, BLOCKSIZE, KSIZE);
 
-		for (int i = 0; i < eigenValuesH.rows; i++)
+		for (int i = 0; i < MatrixHarris.rows; i++)
 		{
-			for (int j = 0; j < eigenValuesH.cols; j++)
+			for (int j = 0; j < MatrixHarris.cols; j++)
 			{
-				eigenValuesH.at<double>(i, j) = HarrisPixel(
-						eigenValuesH.at<Vec3d>(i, j));
+				MatrixHarris.at<double>(i, j) = HarrisPixel(MatrixHarris.at<Vec3d>(i, j));
 			}
 		}
-		aux = adaptativeNonMaximalSupression(eigenValuesH, 5, k);
+		adaptativeNonMaximalSupression(MatrixHarris, 5, k, aux);
 		pHarris.insert(pHarris.end(), aux.begin(), aux.end());
 	}
+
 	sort(pHarris.begin(), pHarris.end());
-
-	for (unsigned int i = 0; (i < 1000) && (i < pHarris.size()); i++)
+	unsigned int n_points = max(1000, (int)pHarris.size());
+	for (unsigned int i = 0; i < n_points; i++)
 	{
-		maximos.push_back(pHarris[pHarris.size() - i - 1]);
+		result.push_back(pHarris[pHarris.size() - i - 1]);
 	}
-
-	return maximos;
 }
 
-void drawCircles(Mat img, vector<HarrisPoint> pHarris, int level)
+void adaptativeNonMaximalSupression(const Mat &MatrixHarris, int entornoSize, int level, vector<HarrisPoint> &pHarris)
 {
-	Scalar color = Scalar(185, 174, 255);
-	for (unsigned int i = 0; i < pHarris.size(); i++)
+	for(int i=0; i < MatrixHarris.rows; i++)
 	{
-		if (level == -1 || pHarris[i].level == level)
-			circle(img, pHarris[i].p, 5, color);
+		for(int j=0; j < MatrixHarris.cols; j++)
+		{
+			pHarris.push_back(HarrisPoint(Point(j, i), level, MatrixHarris.at<double>(i, j)));
+		}
 	}
-	pintaI(img);
 }
 
 bool checkColor(Mat img)
@@ -214,12 +101,11 @@ bool checkColor(Mat img)
 void convertToGray(Mat &img)
 {
 	cvtColor(img, img, CV_RGB2GRAY);
-	return img;
 }
 
 void convertToGrayIfColor(Mat &img)
 {
-	if(!checkColor(img))
+	if(checkColor(img))
 		convertToGray(img);
 }
 
@@ -292,19 +178,32 @@ void calculateOrientation(Mat img, vector<HarrisPoint> &pHarris)
 
 void detectHarris(const Mat &img, vector<HarrisPoint> &pHarris)
 {
-	Mat img_gray = img;
+	Mat img_gray = img.clone();
 	convertToGrayIfColor(img_gray);
 	vector<Mat> pyramid = pyramidGaussianList(img_gray, 4);
-	vector<HarrisPoint> point_harris = listPointHarris(img_gray, pyramid);
-	//refinePoints(pyramid, point_harris);
-	refinePoints(img_gray, point_harris);
+	listHarrisPoints(img_gray, pyramid, pHarris);
+	//refinePoints(pyramid, pHarris);
+	refinePoints(img_gray, pHarris);
 	//calculateOrientation(pyramid, point_harris);
-	calculateOrientation(img_gray, point_harris);
+	calculateOrientation(img_gray, pHarris);
+}
+
+/**
+ * CAMBIAR POR CRUCES/MARCAS.
+ */
+void drawCircles(Mat img, vector<HarrisPoint> pHarris, int level)
+{
+	Scalar color = Scalar(185, 174, 255);
+	for (unsigned int i = 0; i < pHarris.size(); i++)
+	{
+		if (level == -1 || pHarris[i].level == level)
+			circle(img, pHarris[i].p, 5, color);
+	}
 }
 
 void drawHarrisPoints(const Mat &img, const vector<HarrisPoint> &pHarris)
 {
-	Mat img_original = img;
+	Mat img_original = img.clone();
 	drawCircles(img_original, pHarris);
 	pintaI(img_original);
 }
@@ -314,7 +213,7 @@ void drawHarrisPoints(const Mat &img, const vector<HarrisPoint> &pHarris)
  */
 void drawHarrisRegions(const Mat &img, const vector<HarrisPoint> &pHarris)
 {
-	Mat img_original = img;
+	Mat img_original = img.clone();
 	double radio;
 	Scalar color;
 	for (unsigned int i = 0; i < pHarris.size(); i++)
@@ -358,13 +257,12 @@ void detectSIFT(const Mat &img, vector<KeyPoint> &keypoints)
 	 double edgeThreshold=10;
 	 double sigma = 1.6;
 	 SIFT detector = SIFT(nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma);*/
-	Mat img_original = img;
+	Mat img_original = img.clone();
 	SIFT detector = SIFT(); // Parámetros por defecto.
 	detector.operator()(img_original, Mat(), keypoints);
-	drawKeypoints(img_original, keypoints, img_original);
 }
 
-void detectSURF(Mat &img, vector<KeyPoint> &keypoints)
+void detectSURF(const Mat &img, vector<KeyPoint> &keypoints)
 {
 	/*double hessianThreshold = 1;
 	 int nOctaves = 4;
@@ -372,17 +270,23 @@ void detectSURF(Mat &img, vector<KeyPoint> &keypoints)
 	 bool extended = true;
 	 bool upright = false;
 	 SURF detector = SURF(hessianThreshold, nOctaves, nOctaveLayers, extended, upright);*/
-	Mat img_original = img;
+	Mat img_original = img.clone();
 	SURF detector = SURF(); // Parámetros por defecto.
 	detector.operator()(img_original, Mat(), keypoints);
+}
+
+void drawKeyPoints(const Mat &img, const vector<KeyPoint> &keypoints)
+{
+	Mat img_original = img.clone();
 	drawKeypoints(img_original, keypoints, img_original);
+	pintaI(img_original);
 }
 
 void computeMatching(const Mat &img1, const Mat &img2, vector<KeyPoint> &keypoints1,
 		vector<KeyPoint> &keypoints2, vector<DMatch> &matches, METHOD method)
 {
-	Mat gray1 = img1;
-	Mat gray2 = img2;
+	Mat gray1 = img1.clone();
+	Mat gray2 = img2.clone();
 	convertToGrayIfColor(gray1);
 	convertToGrayIfColor(gray2);
 	

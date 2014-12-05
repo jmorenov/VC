@@ -20,11 +20,9 @@
 
 using namespace cv;
 
-/**
- * CAMBIAR!!
- */
-struct HarrisPoint
+class HarrisPoint
 {
+	public:
 	Point p;
 	int level;
 	double orientation;
@@ -39,26 +37,29 @@ struct HarrisPoint
 		valorH = _valorH;
 	}
 
-	bool operator < (const HarrisPoint & pt) const{
-			return valorH < pt.valorH;
-		}
+	bool operator <(const HarrisPoint & pt) const
+	{
+		return valorH < pt.valorH;
+	}
 
-		bool operator > (const HarrisPoint & pt) const {
-			return valorH > pt.valorH;
-		}
+	bool operator >(const HarrisPoint & pt) const
+	{
+		return valorH > pt.valorH;
+	}
 };
 
-enum METHOD { SIFT_AUTO, SURF_AUTO, SIFT_M, SURF_M, HARRIS };
+enum METHOD
+{
+	SIFT_AUTO, SURF_AUTO, SIFT_M, SURF_M, HARRIS
+};
 
 double HarrisPixel(Vec3d p);
 
-vector<Mat> pyramidGaussianList2(Mat img, int levels);
+vector<Mat> pyramidGaussianList(const Mat &img, int levels);
 
-vector<Mat> pyramidGaussianList(Mat img, int levels);
+void adaptativeNonMaximalSupression(const Mat &MatrixHarris, int entornoSize, int level, vector<HarrisPoint> &pHarris);
 
-vector<HarrisPoint> adaptativeNonMaximalSupression(Mat puntosHarrys, int tamanoVentana, int nivel);
-
-vector<HarrisPoint> listPointHarris(Mat img, vector<Mat> &pyramid);
+void listHarrisPoints(const Mat &img, const vector<Mat> &pyramid, vector<HarrisPoint> &result);
 
 void drawCircles(Mat img, vector<HarrisPoint> pHarris, int level = -1);
 
@@ -80,11 +81,15 @@ void detectSIFT(const Mat &img, vector<KeyPoint> &keypoints);
 
 void detectSURF(const Mat &img, vector<KeyPoint> &keypoints);
 
-void drawKeyPoints(const Mat &img, const vector<KeyPoint> &keypoint);
+void drawKeyPoints(const Mat &img, const vector<KeyPoint> &keypoints);
 
-void computeMatching(const Mat &img1, const Mat &img2, vector<KeyPoint> &keypoints1, vector<KeyPoint> &keypoints2, vector<DMatch> &matches, METHOD method);
+void computeMatching(const Mat &img1, const Mat &img2,
+		vector<KeyPoint> &keypoints1, vector<KeyPoint> &keypoints2,
+		vector<DMatch> &matches, METHOD method);
 
-void drawImageMatches(const Mat &img1, const vector<KeyPoint> &keypoints1, const Mat &img2, const vector<KeyPoint> &keypoints2, const vector<DMatch> &matches);
+void drawImageMatches(const Mat &img1, const vector<KeyPoint> &keypoints1,
+		const Mat &img2, const vector<KeyPoint> &keypoints2,
+		const vector<DMatch> &matches);
 
 Mat computeMosaic(const Mat &img1, const Mat &img2);
 
@@ -117,6 +122,5 @@ Mat filterGauss(Mat &src, double sigma);
 Mat imgHybrid(Mat m1, double sigma1, Mat m2, double sigma2);
 
 Mat pyramidGaussian(Mat &src, int levels);
-
 
 #endif /* FUNCIONES_H_ */
