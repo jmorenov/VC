@@ -4,11 +4,10 @@
  * Visión por computador.
  * Trabajo 2
  *
- * 17/11/2014
+ * 05/12/2014
  */
 
 #include "funciones.h"
-
 
 int main(int argc, char* argv[])
 {
@@ -21,31 +20,38 @@ int main(int argc, char* argv[])
 	//imgs.push_back("imagenes/yosemite_full/yosemite6.jpg");
 	//imgs.push_back("imagenes/yosemite_full/yosemite7.jpg");
 
-	vector<Mat> m, imgs_m(imgs.size());
+	// Lectura de las imágenes.
+	vector<Mat> m, images(imgs.size());
 	for (unsigned int i = 0; i < imgs.size(); i++)
-		//imgs_m[i] = imread(imgs[i], CV_LOAD_IMAGE_GRAYSCALE);
-		imgs_m[i] = imread(imgs[i]);
+		images[i] = imread(imgs[i]);
+	
+	// Ejercicio 1: Detección de puntos Harris multiescala.
+	vector<Mat> images_harris;
+	for(unsigned int i = 0; i < imgs.size(); i++)
+		images_harris.push_back(detectHarris(images[i]));
+	pintaMI(images_harris);
 
-	/*for(unsigned int i = 0; i < imgs.size(); i++)
-		detectHarris(imgs_m[i]);*/
-
-	/*vector<KeyPoint> sift_keyp;
+	// Ejercicio 2: Comparación de los detectores SIFT y SURF con el detector implementado MOPS.
+	vector<Mat> images_sift, images_surf;
+	vector<KeyPoint> sift_keyp;
 	for(unsigned int i=0; i<imgs.size(); i++)
-		detectSIFT(imgs_m[i], sift_keyp);
+		images_sift.push_back(detectSIFT(images[i], sift_keyp));
 
 	vector<KeyPoint> surf_keyp;
 	for(unsigned int i=0; i<imgs.size(); i++)
-		detectSURF(imgs_m[i], surf_keyp);*/
+		images_surf.push_back(detectSURF(images[i], surf_keyp));
 
-	/*vector<KeyPoint> keypoints1, keypoints2;
+	// Ejercicio 3: Poner en correspondencia dos imágenes.
+	vector<KeyPoint> keypoints1, keypoints2;
 	vector<DMatch> matches;
-	computeMatchingSIFT(imgs_m[0], imgs_m[1], keypoints1, keypoints2, matches);
-
+	computeMatching(images[0], images[1], keypoints1, keypoints2, matches);
 	Mat img_matches;
-	drawMatches(imgs_m[0], keypoints1, imgs_m[1], keypoints2, matches, img_matches);
-	pintaI(img_matches);*/
+	drawMatches(images[0], keypoints1, images[1], keypoints2, matches, img_matches);
+	pintaI(img_matches);
 
-	Mat panorama = computePanorama(imgs_m);
-	pintaI(panorama);
+	// Ejercicio 4: Estimar la homografía entre dos imágenes y crear un mosaico entre ambas imágenes.
+	Mat mosaic = computeMosaic(images[0], images[1]);
+	pintaI(mosaic);
+	
 	return 0;
 }
