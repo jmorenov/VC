@@ -1,14 +1,19 @@
 /*
- * funciones.cpp
  *
- *  Created on: 17/11/2014
- *      Author: jmorenov
+ * Visión por computador
+ * Trabajo 2
+ *
+ * Created on: 17/11/2014
+ *      Author: Javier Moreno Vega <jmorenov@correo.ugr.es>
+ * Last modified on: 05/12/2014
+ * 	Modified by: Javier Moreno Vega <jmorenov@correo.ugr.es>
+ * 
+ * File: funciones.cpp
  */
 
-#define BLOCKSIZE 7 // blockSize = [3,13]
-#define KSIZE 5 // kSize = [3,9]
-
-#include "funciones.h"
+#include <cmath>
+#include <iostream>
+#include <math.h>
 #include <algorithm>
 
 #include <opencv2/nonfree/nonfree.hpp>
@@ -18,9 +23,10 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/core/core.hpp>
 
-#include <cmath>
-#include <iostream>
-#include <math.h>
+#include "funciones.h"
+
+#define BLOCKSIZE 7 // blockSize = [3,13]
+#define KSIZE 5 // kSize = [3,9]
 
 using namespace std;
 using namespace cv;
