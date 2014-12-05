@@ -1,10 +1,14 @@
-/**
- * Javier Moreno Vega <jmorenov@correo.ugr.es>
+/*
  *
- * Visión por computador.
+ * Visión por computador
  * Trabajo 2
  *
- * 05/12/2014
+ * Created on: 17/11/2014
+ *      Author: Javier Moreno Vega <jmorenov@correo.ugr.es>
+ * Last modified on: 05/12/2014
+ * 	Modified by: Javier Moreno Vega <jmorenov@correo.ugr.es>
+ * 
+ * File: main.cpp
  */
 
 #include "funciones.h"
