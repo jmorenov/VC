@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.000.ppm");
 	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.001.ppm");
 	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.004.ppm");
-	vector<Mat>images_reconstruccion(imgs_reconstruccion.size());
+	vector<Mat> images_reconstruccion(imgs_reconstruccion.size());
 	readImages(imgs_reconstruccion, images_reconstruccion);
 	ejercicio3(images_reconstruccion);
 
@@ -172,6 +172,8 @@ void ejercicio2(vector<Mat> images)
 	Mat lines1 = drawEpipolarLines(images[0], pts1, F, 1);
 	Mat lines2 = drawEpipolarLines(images[1], pts2, F, 2);
 
+	pintaMI(images);
+
 	double error = verifyF(lines1, lines2, pts1, pts2);
 	cout << "Error: " << error << endl;
 }
@@ -182,17 +184,23 @@ void ejercicio2(vector<Mat> images)
 void ejercicio3(vector<Mat> images)
 {
 	cout << "Ejercicio 3:" << endl;
-	Mat K1, radial1, R1, t1;
-	readData("imagenes/reconstruccion/rdimage.000.ppm.camera", K1, radial1, R1,
-			t1);
-	Mat K2, radial2, R2, t2;
-	readData("imagenes/reconstruccion/rdimage.001.ppm.camera", K2, radial2, R2,
-			t2);
-	Mat K3, radial3, R3, t3;
-	readData("imagenes/reconstruccion/rdimage.004.ppm.camera", K3, radial3, R3,
-			t3);
+	vector<Mat> K(3), radial(3), R(3), t(3);
+	readData("imagenes/reconstruccion/rdimage.000.ppm.camera", K[0], radial[0], R[0],
+			t[0]);
+	readData("imagenes/reconstruccion/rdimage.001.ppm.camera", K[1], radial[1], R[1],
+			t[1]);
+	/*readData("imagenes/reconstruccion/rdimage.004.ppm.camera", K[2], radial[2], R[2],
+			t[2]);*/
 
+	vector<Mat> movement_R(3), movement_t(3);
+	cout << "Pareja de imágenes: 000 y 001:" << endl;
+	calculateMovement(images[0], images[1], K[0], K[1], radial[0], radial[1], R[0], R[1], t[0], t[1], movement_R[0], movement_t[0]);
 
+	/*cout << "Pareja de imágenes: 000 y 004:" << endl;
+	calculateMovement(images[0], images[2], K[0], K[2], radial[0], radial[2], R[0], R[2], t[0], t[2], movement_R[1], movement_t[1]);
+
+	cout << "Pareja de imágenes: 001 y 004:" << endl;
+	calculateMovement(images[1], images[2], K[1], K[2], radial[1], radial[2], R[1], R[2], t[1], t[2], movement_R[2], movement_t[2]);*/
 
 }
 

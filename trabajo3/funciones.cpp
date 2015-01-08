@@ -81,29 +81,30 @@ double calculateECM(Mat &P, Mat &_P)
 	return ECM;
 }
 
-Mat drawEpipolarLines(Mat image1, vector<Point2f> &points1, Mat &F,
+Mat drawEpipolarLines(Mat &image1, vector<Point2f> &points1, Mat &F,
 		int whichImage)
 {
 	vector<Vec3f> lines1;
 	computeCorrespondEpilines(Mat(points1), whichImage, F, lines1);
-	Mat lines = Mat(2,lines1.size(), CV_64FC1);
+	Mat lines = Mat(2, lines1.size(), CV_64FC1);
 
 	int lines_c = 0;
 	Point p1, p2;
 	for (vector<cv::Vec3f>::const_iterator it = lines1.begin();
 			it != lines1.end(); ++it)
 	{
-		if(lines_c < 200)
+		if (lines_c < 200)
 		{
 			p1 = Point(0, -(*it)[2] / (*it)[1]);
-			p2 = Point(image1.cols, -((*it)[2] + (*it)[0] * image1.cols) / (*it)[1]);
-			line(image1, p1, p2, Scalar(0,0,255));
+			p2 = Point(image1.cols,
+					-((*it)[2] + (*it)[0] * image1.cols) / (*it)[1]);
+			line(image1, p1, p2, Scalar(0, 0, 255));
 			lines.at<Point>(0, lines_c) = p1;
 			lines.at<Point>(1, lines_c) = p2;
 			lines_c++;
 		}
 	}
-	pintaI(image1);
+
 	return lines;
 }
 
@@ -111,30 +112,126 @@ double verifyF(Mat &lines1, Mat &lines2, vector<Point2f> &points1,
 		vector<Point2f> &points2)
 {
 	double error1 = 0.0;
-	for(int i=0; i<lines1.rows; i++)
+	for (int i = 0; i < lines1.rows; i++)
 	{
-		error1 += distance_to_line(lines1.at<Point>(0,i), lines1.at<Point>(1,i), points1[i]);
+		error1 += distance_to_line(lines1.at<Point>(0, i),
+				lines1.at<Point>(1, i), points1[i]);
 	}
 	error1 /= lines1.rows;
 
 	double error2 = 0.0;
-		for(int i=0; i<lines2.rows; i++)
-		{
-			error2 += distance_to_line(lines2.at<Point>(0,i), lines2.at<Point>(1,i), points2[i]);
-		}
-		error2 /= lines2.rows;
+	for (int i = 0; i < lines2.rows; i++)
+	{
+		error2 += distance_to_line(lines2.at<Point>(0, i),
+				lines2.at<Point>(1, i), points2[i]);
+	}
+	error2 /= lines2.rows;
 
-	return (error1+error2)/2;
+	return (error1 + error2) / 2;
 }
 
-double distance_to_line( Point begin, Point end, Point x ){
-   //translate the begin to the origin
-   end -= begin;
-   x -= begin;
+double distance_to_line(Point begin, Point end, Point x)
+{
+	//translate the begin to the origin
+	end -= begin;
+	x -= begin;
 
-   //¿do you see the triangle?
-   double area = x.cross(end);
-   return area / norm(end);
+	//¿do you see the triangle?
+	double area = x.cross(end);
+	return area / norm(end);
+}
+
+void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &radial0,
+		Mat &radial1, Mat &R0, Mat &R1, Mat &t0, Mat &t1, Mat &output_R,
+		Mat &output_t)
+{
+	vector<KeyPoint> keypoints1, keypoints2;
+	vector<DMatch> matches;
+	computeMatching(image0, image1, keypoints1, keypoints2, matches, SURF_AUTO);
+	vector<Point2f> pts1;
+	vector<Point2f> pts2;
+
+	for (unsigned int i = 0; i < matches.size(); i++)
+	{
+		pts1.push_back(keypoints1[matches[i].queryIdx].pt);
+		pts2.push_back(keypoints2[matches[i].trainIdx].pt);
+	}
+
+	Mat F = findFundamentalMat(pts1, pts2);
+
+	/*Matx33d xt, x_;
+	Mat test;
+	bool r = true;
+	for (unsigned int i=0; i<pts1.size(); i++)
+	{
+		xt = Matx33d(pts1[i].x, pts1[i].y, 1);
+		x_ = Matx33d(pts2[i].x, pts2[i].y, 1);
+
+		test = Mat(x_) * F * Mat(xt).t();
+
+		for(int j=0; j<test.rows; j++)
+			for(int k=0; k<test.cols; k++)
+				if(test.at<double>(j,k) != 0)
+				{
+					r = false;
+					break;
+				}
+		if(r)
+			cout<<test<<endl;
+		r = true;
+	}*/
+
+	Mat E = K1.t() * F * K0;
+
+	Matx33d W(0, -1, 0, 1, 0, 0, 0, 0, 1); // diag(1,1,0)
+	SVD svd_(E);
+	Mat newE = svd_.u * Mat(W) * svd_.vt;
+
+	SVD svd (newE);
+	Mat R_sol_1 = svd.u * Mat(W) * svd.vt; // U W V^T
+	Mat R_sol_2 = svd.u * Mat(W).t() * svd.vt; // U W^T V^T
+	Mat t_sol_1 = svd.u.col(2); // +u3
+	Mat t_sol_2 = -svd.u.col(2); // -u3
+
+	// 4 soluciones, solo una es correcta:
+	vector<Mat> P_(4);
+	hconcat(R_sol_1, t_sol_1, P_[0]);
+	hconcat(R_sol_1, t_sol_2, P_[1]);
+	hconcat(R_sol_2, t_sol_1, P_[2]);
+	hconcat(R_sol_2, t_sol_2, P_[3]);
+
+	Mat P = Mat::eye(3, 4, CV_64FC1);
+
+	vector<Mat> outv(4);
+	triangulatePoints(P, P_[0], pts1, pts2, outv[0]);
+	triangulatePoints(P, P_[1], pts1, pts2, outv[1]);
+	triangulatePoints(P, P_[2], pts1, pts2, outv[2]);
+	triangulatePoints(P, P_[3], pts1, pts2, outv[3]);
+
+	Mat out;
+	bool positive = true;
+	Mat P1;
+	for(unsigned int k=0; k<outv.size(); k++)
+	{
+		out = outv[k].clone();
+		P1 = P_[k].clone();
+		for (int i = 0; i < out.rows && positive; i++)
+		{
+			for (int j = 0; j < out.cols && positive; j++)
+			{
+				cout<<Mat(out.at<Point3d>(i, j))<<endl;
+				if (P.dot(Mat(out.at<Point3d>(i, j)).t()) < 0 || P1.dot(Mat(out.at<Point3d>(i, j)).t()))
+				{
+					cout << "NOP" << endl;
+					positive = false;
+				}
+			}
+		}
+		if(positive)
+			cout << "YEP" << endl;
+		positive = true;
+	}
+
 }
 
 /**
