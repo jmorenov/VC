@@ -31,7 +31,6 @@ using namespace cv;
 /**
  * Funciones Trabajo 3.
  */
-
 Mat generateP()
 {
 
@@ -108,6 +107,22 @@ Mat drawEpipolarLines(Mat &image1, vector<Point2f> &points1, Mat &F,
 	return lines;
 }
 
+Mat calculateF(Mat &image0, Mat &image1, vector<Point2f> &pts1,
+		vector<Point2f> &pts2)
+{
+	vector<KeyPoint> keypoints1, keypoints2;
+	vector<DMatch> matches;
+	computeMatching(image0, image1, keypoints1, keypoints2, matches, SURF_AUTO);
+	for (unsigned int i = 0; i < matches.size(); i++)
+	{
+		pts1.push_back(keypoints1[matches[i].queryIdx].pt);
+		pts2.push_back(keypoints2[matches[i].trainIdx].pt);
+	}
+	Mat F = findFundamentalMat(pts1, pts2, CV_FM_RANSAC);
+	return F;
+}
+
+// MAL
 double verifyF(Mat &lines1, Mat &lines2, vector<Point2f> &points1,
 		vector<Point2f> &points2)
 {
@@ -145,93 +160,71 @@ void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &radial0,
 		Mat &radial1, Mat &R0, Mat &R1, Mat &t0, Mat &t1, Mat &output_R,
 		Mat &output_t)
 {
-	vector<KeyPoint> keypoints1, keypoints2;
-	vector<DMatch> matches;
-	computeMatching(image0, image1, keypoints1, keypoints2, matches, SURF_AUTO);
 	vector<Point2f> pts1;
 	vector<Point2f> pts2;
-
-	for (unsigned int i = 0; i < matches.size(); i++)
-	{
-		pts1.push_back(keypoints1[matches[i].queryIdx].pt);
-		pts2.push_back(keypoints2[matches[i].trainIdx].pt);
-	}
-
-	Mat F = findFundamentalMat(pts1, pts2);
-
-	/*Matx33d xt, x_;
-	Mat test;
-	bool r = true;
-	for (unsigned int i=0; i<pts1.size(); i++)
-	{
-		xt = Matx33d(pts1[i].x, pts1[i].y, 1);
-		x_ = Matx33d(pts2[i].x, pts2[i].y, 1);
-
-		test = Mat(x_) * F * Mat(xt).t();
-
-		for(int j=0; j<test.rows; j++)
-			for(int k=0; k<test.cols; k++)
-				if(test.at<double>(j,k) != 0)
-				{
-					r = false;
-					break;
-				}
-		if(r)
-			cout<<test<<endl;
-		r = true;
-	}*/
+	Mat F = calculateF(image0, image1, pts1, pts2);
 
 	Mat E = K1.t() * F * K0;
-
 	Matx33d W(0, -1, 0, 1, 0, 0, 0, 0, 1); // diag(1,1,0)
 	SVD svd_(E);
 	Mat newE = svd_.u * Mat(W) * svd_.vt;
 
-	SVD svd (newE);
-	Mat R_sol_1 = svd.u * Mat(W) * svd.vt; // U W V^T
-	Mat R_sol_2 = svd.u * Mat(W).t() * svd.vt; // U W^T V^T
-	Mat t_sol_1 = svd.u.col(2); // +u3
-	Mat t_sol_2 = -svd.u.col(2); // -u3
+	SVD svd(newE);
+	vector<Mat> R(2), t(2);
+	R[0] = svd.u * Mat(W) * svd.vt; // U W V^T
+	R[1] = svd.u * Mat(W).t() * svd.vt; // U W^T V^T
+	t[0] = svd.u.col(2); // +u3
+	t[1] = -svd.u.col(2); // -u3
 
 	// 4 soluciones, solo una es correcta:
-	vector<Mat> P_(4);
-	hconcat(R_sol_1, t_sol_1, P_[0]);
-	hconcat(R_sol_1, t_sol_2, P_[1]);
-	hconcat(R_sol_2, t_sol_1, P_[2]);
-	hconcat(R_sol_2, t_sol_2, P_[3]);
-
+	vector<Mat> P1(4);
+	hconcat(R[0], t[0], P1[0]);
+	hconcat(R[0], t[1], P1[1]);
+	hconcat(R[1], t[0], P1[2]);
+	hconcat(R[1], t[1], P1[3]);
 	Mat P = Mat::eye(3, 4, CV_64FC1);
 
-	vector<Mat> outv(4);
-	triangulatePoints(P, P_[0], pts1, pts2, outv[0]);
-	triangulatePoints(P, P_[1], pts1, pts2, outv[1]);
-	triangulatePoints(P, P_[2], pts1, pts2, outv[2]);
-	triangulatePoints(P, P_[3], pts1, pts2, outv[3]);
+	vector<Mat> points_world(4);
+	triangulatePoints(P, P1[0], pts1, pts2, points_world[0]);
+	triangulatePoints(P, P1[1], pts1, pts2, points_world[1]);
+	triangulatePoints(P, P1[2], pts1, pts2, points_world[2]);
+	triangulatePoints(P, P1[3], pts1, pts2, points_world[3]);
 
-	Mat out;
-	bool positive = true;
-	Mat P1;
-	for(unsigned int k=0; k<outv.size(); k++)
+	vector<int> points_front_cameras(4, 0);
+	int max_points = 0, max_k = 0;
+	Mat cam0 = calculateCoordCam(P), cam1;
+	for (unsigned int k = 0; k < points_world.size(); k++)
 	{
-		out = outv[k].clone();
-		P1 = P_[k].clone();
-		for (int i = 0; i < out.rows && positive; i++)
+		cam1 = calculateCoordCam(P1[k]);
+		for (int i = 0; i < points_world[k].rows; i++)
 		{
-			for (int j = 0; j < out.cols && positive; j++)
+			for (int j = 0; j < points_world[k].cols; j++)
 			{
-				cout<<Mat(out.at<Point3d>(i, j))<<endl;
-				if (P.dot(Mat(out.at<Point3d>(i, j)).t()) < 0 || P1.dot(Mat(out.at<Point3d>(i, j)).t()))
+				if (Mat(points_world[k].at<Point3d>(i, j)).dot(
+						cam1) >= 0.0
+						&& Mat(points_world[k].at<Point3d>(i, j)).dot(
+								cam0) >= 0.0)
 				{
-					cout << "NOP" << endl;
-					positive = false;
+					points_front_cameras[k]++;
 				}
 			}
 		}
-		if(positive)
-			cout << "YEP" << endl;
-		positive = true;
+		if (max_points < points_front_cameras[k])
+		{
+			max_points = points_front_cameras[k];
+			max_k = k;
+		}
 	}
 
+	if (max_k == 0 || max_k == 1)
+		output_R = R[0].clone();
+	else
+		output_R = R[1].clone();
+
+	if (max_k == 0 || max_k == 2)
+		output_t = t[0].clone();
+	else
+		output_t = t[1].clone();
 }
 
 /**

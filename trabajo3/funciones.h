@@ -37,6 +37,8 @@ double calculateECM(Mat &P, Mat &_P);
 
 Mat drawEpipolarLines(Mat &image1, vector<Point2f> &points1, Mat &F, int whichImage);
 
+Mat calculateF(Mat &image0, Mat &image1, vector<Point2f> &pts1, vector<Point2f> &pts2);
+
 double verifyF(Mat &lines1, Mat &lines2, vector<Point2f> &points1, vector<Point2f> &points2);
 
 double distance_to_line( Point begin, Point end, Point x);

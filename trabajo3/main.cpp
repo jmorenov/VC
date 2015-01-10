@@ -45,9 +45,9 @@ int main(int argc, char* argv[])
 	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.004.ppm");
 	vector<Mat> images_reconstruccion(imgs_reconstruccion.size());
 	readImages(imgs_reconstruccion, images_reconstruccion);
-	ejercicio3(images_reconstruccion);
+	//ejercicio3(images_reconstruccion);
 
-	//ejercicio4(images);
+	ejercicio4(images);
 
 	cout << "Fin Trabajo 3." << endl;
 	return 0;
@@ -151,23 +151,9 @@ void ejercicio1(vector<Mat> images)
 void ejercicio2(vector<Mat> images)
 {
 	cout << "Ejercicio 2:" << endl;
-	vector<KeyPoint> keypoints1, keypoints2;
-	vector<DMatch> matches;
-	computeMatching(images[0], images[1], keypoints1, keypoints2, matches,
-			SURF_AUTO);
 
-	drawKeyPoints(images[0], keypoints1);
-	drawKeyPoints(images[1], keypoints2);
-
-	vector<Point2f> pts1;
-	vector<Point2f> pts2;
-
-	for (unsigned int i = 0; i < matches.size(); i++)
-	{
-		pts1.push_back(keypoints1[matches[i].queryIdx].pt);
-		pts2.push_back(keypoints2[matches[i].trainIdx].pt);
-	}
-	Mat F = findFundamentalMat(pts1, pts2);
+	vector<Point2f> pts1, pts2;
+	Mat F = calculateF(images[0], images[1], pts1, pts2);
 
 	Mat lines1 = drawEpipolarLines(images[0], pts1, F, 1);
 	Mat lines2 = drawEpipolarLines(images[1], pts2, F, 2);
@@ -195,13 +181,18 @@ void ejercicio3(vector<Mat> images)
 	vector<Mat> movement_R(3), movement_t(3);
 	cout << "Pareja de imágenes: 000 y 001:" << endl;
 	calculateMovement(images[0], images[1], K[0], K[1], radial[0], radial[1], R[0], R[1], t[0], t[1], movement_R[0], movement_t[0]);
+	cout<<"R: "<<"\n"<<movement_R[0]<<endl;
+	cout<<"t: "<<"\n"<<movement_t[0]<<endl;
 
-	/*cout << "Pareja de imágenes: 000 y 004:" << endl;
+	cout << "Pareja de imágenes: 000 y 004:" << endl;
 	calculateMovement(images[0], images[2], K[0], K[2], radial[0], radial[2], R[0], R[2], t[0], t[2], movement_R[1], movement_t[1]);
+	cout<<"R: "<<"\n"<<movement_R[1]<<endl;
+	cout<<"t: "<<"\n"<<movement_t[1]<<endl;
 
 	cout << "Pareja de imágenes: 001 y 004:" << endl;
-	calculateMovement(images[1], images[2], K[1], K[2], radial[1], radial[2], R[1], R[2], t[1], t[2], movement_R[2], movement_t[2]);*/
-
+	calculateMovement(images[1], images[2], K[1], K[2], radial[1], radial[2], R[1], R[2], t[1], t[2], movement_R[2], movement_t[2]);
+	cout<<"R: "<<"\n"<<movement_R[2]<<endl;
+	cout<<"t: "<<"\n"<<movement_t[2]<<endl;
 }
 
 /**
@@ -210,4 +201,5 @@ void ejercicio3(vector<Mat> images)
 void ejercicio4(vector<Mat> images)
 {
 	cout << "Ejercicio 4:" << endl;
+
 }
