@@ -37,19 +37,19 @@ double calculateECM(Mat &P, Mat &_P);
 
 Mat drawEpipolarLines(Mat &image1, vector<Point2f> &points1, Mat &F, int whichImage);
 
-Mat calculateF(Mat &image0, Mat &image1, vector<Point2f> &pts1, vector<Point2f> &pts2);
+Mat calculateF(Mat &image0, Mat &image1, vector<Point2f> &pts1, vector<Point2f> &pts2, unsigned int n_points = 5000, bool sort_matches = false);
 
 double verifyF(Mat &lines1, Mat &lines2, vector<Point2f> &points1, vector<Point2f> &points2);
 
 double distance_to_line( Point begin, Point end, Point x);
 
-void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &radial0, Mat &radial1, Mat &R0, Mat &R1, Mat &t0, Mat &t1, Mat &output_R, Mat &output_t);
+void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &output_R, Mat &output_t);
 
 void drawKeyPoints(const Mat &img, const vector<KeyPoint> &keypoints);
 
 void computeMatching(const Mat &img1, const Mat &img2,
 		vector<KeyPoint> &keypoints1, vector<KeyPoint> &keypoints2,
-		vector<DMatch> &matches, METHOD method);
+		vector<DMatch> &matches, METHOD method, bool sort_matches = false);
 
 bool checkColor(Mat img);
 

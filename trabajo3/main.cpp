@@ -31,23 +31,20 @@ int main(int argc, char* argv[])
 {
 	cout << "Inicio Trabajo 3." << endl;
 
-	vector<string> imgs;
+	vector<string> imgs, imgs_reconstruccion;
 	imgs.push_back("imagenes/Vmort1.pgm");
 	imgs.push_back("imagenes/Vmort2.pgm");
-	vector<Mat> images(imgs.size());
-	readImages(imgs, images);
-	//ejercicio1(images);
-	//ejercicio2(images);
-
-	vector<string> imgs_reconstruccion;
 	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.000.ppm");
 	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.001.ppm");
 	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.004.ppm");
-	vector<Mat> images_reconstruccion(imgs_reconstruccion.size());
+	vector<Mat> images(imgs.size()), images_reconstruccion(imgs_reconstruccion.size());
+	readImages(imgs, images);
 	readImages(imgs_reconstruccion, images_reconstruccion);
-	//ejercicio3(images_reconstruccion);
 
-	ejercicio4(images);
+	//ejercicio1(images);
+	//ejercicio2(images);
+	//ejercicio3(images_reconstruccion);
+	ejercicio4(images_reconstruccion);
 
 	cout << "Fin Trabajo 3." << endl;
 	return 0;
@@ -175,22 +172,22 @@ void ejercicio3(vector<Mat> images)
 			t[0]);
 	readData("imagenes/reconstruccion/rdimage.001.ppm.camera", K[1], radial[1], R[1],
 			t[1]);
-	/*readData("imagenes/reconstruccion/rdimage.004.ppm.camera", K[2], radial[2], R[2],
-			t[2]);*/
+	readData("imagenes/reconstruccion/rdimage.004.ppm.camera", K[2], radial[2], R[2],
+			t[2]);
 
 	vector<Mat> movement_R(3), movement_t(3);
 	cout << "Pareja de imágenes: 000 y 001:" << endl;
-	calculateMovement(images[0], images[1], K[0], K[1], radial[0], radial[1], R[0], R[1], t[0], t[1], movement_R[0], movement_t[0]);
+	calculateMovement(images[0], images[1], K[0], K[1], movement_R[0], movement_t[0]);
 	cout<<"R: "<<"\n"<<movement_R[0]<<endl;
 	cout<<"t: "<<"\n"<<movement_t[0]<<endl;
 
 	cout << "Pareja de imágenes: 000 y 004:" << endl;
-	calculateMovement(images[0], images[2], K[0], K[2], radial[0], radial[2], R[0], R[2], t[0], t[2], movement_R[1], movement_t[1]);
+	calculateMovement(images[0], images[2], K[0], K[2], movement_R[1], movement_t[1]);
 	cout<<"R: "<<"\n"<<movement_R[1]<<endl;
 	cout<<"t: "<<"\n"<<movement_t[1]<<endl;
 
 	cout << "Pareja de imágenes: 001 y 004:" << endl;
-	calculateMovement(images[1], images[2], K[1], K[2], radial[1], radial[2], R[1], R[2], t[1], t[2], movement_R[2], movement_t[2]);
+	calculateMovement(images[1], images[2], K[1], K[2], movement_R[2], movement_t[2]);
 	cout<<"R: "<<"\n"<<movement_R[2]<<endl;
 	cout<<"t: "<<"\n"<<movement_t[2]<<endl;
 }

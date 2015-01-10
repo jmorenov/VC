@@ -108,12 +108,12 @@ Mat drawEpipolarLines(Mat &image1, vector<Point2f> &points1, Mat &F,
 }
 
 Mat calculateF(Mat &image0, Mat &image1, vector<Point2f> &pts1,
-		vector<Point2f> &pts2)
+		vector<Point2f> &pts2, unsigned int n_points, bool sort_matches)
 {
 	vector<KeyPoint> keypoints1, keypoints2;
 	vector<DMatch> matches;
-	computeMatching(image0, image1, keypoints1, keypoints2, matches, SURF_AUTO);
-	for (unsigned int i = 0; i < matches.size(); i++)
+	computeMatching(image0, image1, keypoints1, keypoints2, matches, SURF_AUTO, sort_matches);
+	for (unsigned int i = 0; i < matches.size() && i < n_points; i++)
 	{
 		pts1.push_back(keypoints1[matches[i].queryIdx].pt);
 		pts2.push_back(keypoints2[matches[i].trainIdx].pt);
@@ -156,19 +156,16 @@ double distance_to_line(Point begin, Point end, Point x)
 	return area / norm(end);
 }
 
-void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &radial0,
-		Mat &radial1, Mat &R0, Mat &R1, Mat &t0, Mat &t1, Mat &output_R,
+void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &output_R,
 		Mat &output_t)
 {
 	vector<Point2f> pts1;
 	vector<Point2f> pts2;
-	Mat F = calculateF(image0, image1, pts1, pts2);
-
+	Mat F = calculateF(image0, image1, pts1, pts2, 1000);
 	Mat E = K1.t() * F * K0;
-	Matx33d W(0, -1, 0, 1, 0, 0, 0, 0, 1); // diag(1,1,0)
+	Mat W = Mat(Matx33d(0, -1, 0, 1, 0, 0, 0, 0, 1)).clone(); // diag(1,1,0)
 	SVD svd_(E);
 	Mat newE = svd_.u * Mat(W) * svd_.vt;
-
 	SVD svd(newE);
 	vector<Mat> R(2), t(2);
 	R[0] = svd.u * Mat(W) * svd.vt; // U W V^T
@@ -185,6 +182,8 @@ void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &radial0,
 	Mat P = Mat::eye(3, 4, CV_64FC1);
 
 	vector<Mat> points_world(4);
+	vector<Point2f> old_pts1 = pts1, old_pts2 = pts2;
+	correctMatches(F, old_pts1, old_pts2, pts1, pts2);
 	triangulatePoints(P, P1[0], pts1, pts2, points_world[0]);
 	triangulatePoints(P, P1[1], pts1, pts2, points_world[1]);
 	triangulatePoints(P, P1[2], pts1, pts2, points_world[2]);
@@ -242,7 +241,7 @@ void drawKeyPoints(const Mat &img, const vector<KeyPoint> &keypoints)
  */
 void computeMatching(const Mat &img1, const Mat &img2,
 		vector<KeyPoint> &keypoints1, vector<KeyPoint> &keypoints2,
-		vector<DMatch> &matches, METHOD method)
+		vector<DMatch> &matches, METHOD method, bool sort_matches)
 {
 	Mat gray1 = img1.clone();
 	Mat gray2 = img2.clone();
@@ -282,6 +281,11 @@ void computeMatching(const Mat &img1, const Mat &img2,
 	// matching descriptors
 	BruteForceMatcher<L2<float> > matcher;
 	matcher.match(descriptors1, descriptors2, matches);
+	if(sort_matches)
+	{
+		sort(matches.begin(), matches.end());
+		matches.assign(matches.begin(), (matches.begin() + (matches.size() * 0.2)));
+	}
 }
 
 /**
