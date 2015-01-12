@@ -112,7 +112,8 @@ Mat calculateF(Mat &image0, Mat &image1, vector<Point2f> &pts1,
 {
 	vector<KeyPoint> keypoints1, keypoints2;
 	vector<DMatch> matches;
-	computeMatching(image0, image1, keypoints1, keypoints2, matches, SURF_AUTO, sort_matches);
+	computeMatching(image0, image1, keypoints1, keypoints2, matches, SURF_AUTO,
+			sort_matches);
 	for (unsigned int i = 0; i < matches.size() && i < n_points; i++)
 	{
 		pts1.push_back(keypoints1[matches[i].queryIdx].pt);
@@ -156,8 +157,17 @@ double distance_to_line(Point begin, Point end, Point x)
 	return area / norm(end);
 }
 
-void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &output_R,
-		Mat &output_t)
+Mat calculateE(Mat &image0, Mat &image1, vector<Point2f> &pts1,
+		vector<Point2f> &pts2, Mat &K0, Mat &K1, unsigned int n_points)
+{
+	Mat F = calculateF(image0, image1, pts1, pts2, n_points);
+	Mat E = K1.t() * F * K0;
+	return E;
+}
+
+void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1,
+		Mat &output_R, Mat &output_t, Mat &output_P, Mat &output_P1,
+		Mat &output_points_world)
 {
 	vector<Point2f> pts1;
 	vector<Point2f> pts2;
@@ -181,7 +191,7 @@ void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &output_R
 	hconcat(R[1], t[1], P1[3]);
 	Mat P = Mat::eye(3, 4, CV_64FC1);
 
-	vector<Mat> points_world(4);
+	vector<Mat> points_world(4, Mat(1, pts1.size(), CV_64FC4));
 	vector<Point2f> old_pts1 = pts1, old_pts2 = pts2;
 	correctMatches(F, old_pts1, old_pts2, pts1, pts2);
 	triangulatePoints(P, P1[0], pts1, pts2, points_world[0]);
@@ -199,10 +209,9 @@ void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &output_R
 		{
 			for (int j = 0; j < points_world[k].cols; j++)
 			{
-				if (Mat(points_world[k].at<Point3d>(i, j)).dot(
-						cam1) >= 0.0
-						&& Mat(points_world[k].at<Point3d>(i, j)).dot(
-								cam0) >= 0.0)
+				if (Mat(points_world[k].at<Point3d>(i, j)).dot(cam1) >= 0.0
+						&& Mat(points_world[k].at<Point3d>(i, j)).dot(cam0)
+								>= 0.0)
 				{
 					points_front_cameras[k]++;
 				}
@@ -215,15 +224,80 @@ void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &output_R
 		}
 	}
 
-	if (max_k == 0 || max_k == 1)
+	output_P = P.clone();
+	switch (max_k)
+	{
+	case 0:
 		output_R = R[0].clone();
-	else
-		output_R = R[1].clone();
-
-	if (max_k == 0 || max_k == 2)
 		output_t = t[0].clone();
-	else
+		output_P1 = P1[0].clone();
+		output_points_world = points_world[0].clone();
+		break;
+	case 1:
+		output_R = R[0].clone();
 		output_t = t[1].clone();
+		output_P1 = P1[1].clone();
+		output_points_world = points_world[1].clone();
+		break;
+	case 2:
+		output_R = R[1].clone();
+		output_t = t[0].clone();
+		output_P1 = P1[2].clone();
+		output_points_world = points_world[2].clone();
+		break;
+	case 3:
+		output_R = R[1].clone();
+		output_t = t[1].clone();
+		output_P1 = P1[1].clone();
+		output_points_world = points_world[3].clone();
+		break;
+	}
+}
+
+void reconstruction3D(vector<Mat> &images, vector<Mat> &K,
+		vector<Mat> &output_images)
+{
+	vector<Mat> E(3);
+	vector<vector<Point2f> > pts1(3), pts2(3);
+	vector<Mat> R(3), t(3), P(3), P1(3), points_world(3);
+	output_images = vector<Mat>(3);
+
+	Mat F = calculateF(images[0], images[1], pts1[0], pts2[0], 200);
+	calculateMovement(images[0], images[1], K[0], K[1], R[0], t[0], P[0], P1[0],
+			points_world[0]);
+	for (int i = 0; i < points_world[0].cols && i < 200; i++)
+	{
+		circle(images[0], pts1[0][i], 5, Scalar(0, 0, 255));
+		circle(images[1], pts2[0][i], 5, Scalar(0, 0, 255));
+	}
+	output_images[0] = Mat(images[0].cols / 2, images[0].rows / 2,
+			images[0].type(), images[0].channels());
+	resize(images[0].t(), output_images[0], output_images[0].size());
+
+
+	Mat F = calculateF(images[0], images[2], pts1[1], pts2[1], 200);
+	calculateMovement(images[0], images[2], K[0], K[2], R[0], t[0], P[1], P1[1],
+			points_world[1]);
+	for (int i = 0; i < points_world[1].cols && i < 200; i++)
+	{
+		circle(images[0], pts1[1][i], 5, Scalar(0, 0, 255));
+	}
+	output_images[0] = Mat(images[0].cols / 2, images[0].rows / 2,
+			images[0].type(), images[0].channels());
+	resize(images[0].t(), output_images[0], output_images[0].size());
+
+
+	Mat F = calculateF(images[0], images[1], pts1[0], pts2[0], 200);
+	calculateMovement(images[0], images[1], K[0], K[1], R[0], t[0], P[0], P1[0],
+			points_world[0]);
+	for (int i = 0; i < points_world[0].cols && i < 200; i++)
+	{
+		circle(images[0], pts1[0][i], 5, Scalar(0, 0, 255));
+	}
+	output_images[0] = Mat(images[0].cols / 2, images[0].rows / 2,
+			images[0].type(), images[0].channels());
+	resize(images[0].t(), output_images[0], output_images[0].size());
+
 }
 
 /**
@@ -281,10 +355,11 @@ void computeMatching(const Mat &img1, const Mat &img2,
 	// matching descriptors
 	BruteForceMatcher<L2<float> > matcher;
 	matcher.match(descriptors1, descriptors2, matches);
-	if(sort_matches)
+	if (sort_matches)
 	{
 		sort(matches.begin(), matches.end());
-		matches.assign(matches.begin(), (matches.begin() + (matches.size() * 0.2)));
+		matches.assign(matches.begin(),
+				(matches.begin() + (matches.size() * 0.2)));
 	}
 }
 

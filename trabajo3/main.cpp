@@ -37,7 +37,8 @@ int main(int argc, char* argv[])
 	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.000.ppm");
 	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.001.ppm");
 	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.004.ppm");
-	vector<Mat> images(imgs.size()), images_reconstruccion(imgs_reconstruccion.size());
+	vector<Mat> images(imgs.size()), images_reconstruccion(
+			imgs_reconstruccion.size());
 	readImages(imgs, images);
 	readImages(imgs_reconstruccion, images_reconstruccion);
 
@@ -168,28 +169,33 @@ void ejercicio3(vector<Mat> images)
 {
 	cout << "Ejercicio 3:" << endl;
 	vector<Mat> K(3), radial(3), R(3), t(3);
-	readData("imagenes/reconstruccion/rdimage.000.ppm.camera", K[0], radial[0], R[0],
-			t[0]);
-	readData("imagenes/reconstruccion/rdimage.001.ppm.camera", K[1], radial[1], R[1],
-			t[1]);
-	readData("imagenes/reconstruccion/rdimage.004.ppm.camera", K[2], radial[2], R[2],
-			t[2]);
+	readData("imagenes/reconstruccion/rdimage.000.ppm.camera", K[0], radial[0],
+			R[0], t[0]);
+	readData("imagenes/reconstruccion/rdimage.001.ppm.camera", K[1], radial[1],
+			R[1], t[1]);
+	readData("imagenes/reconstruccion/rdimage.004.ppm.camera", K[2], radial[2],
+			R[2], t[2]);
 
 	vector<Mat> movement_R(3), movement_t(3);
+	Mat points_world;
+	Mat P, P1;
 	cout << "Pareja de imágenes: 000 y 001:" << endl;
-	calculateMovement(images[0], images[1], K[0], K[1], movement_R[0], movement_t[0]);
-	cout<<"R: "<<"\n"<<movement_R[0]<<endl;
-	cout<<"t: "<<"\n"<<movement_t[0]<<endl;
+	calculateMovement(images[0], images[1], K[0], K[1], movement_R[0],
+			movement_t[0], P, P1, points_world);
+	cout << "R: " << "\n" << movement_R[0] << endl;
+	cout << "t: " << "\n" << movement_t[0] << endl;
 
 	cout << "Pareja de imágenes: 000 y 004:" << endl;
-	calculateMovement(images[0], images[2], K[0], K[2], movement_R[1], movement_t[1]);
-	cout<<"R: "<<"\n"<<movement_R[1]<<endl;
-	cout<<"t: "<<"\n"<<movement_t[1]<<endl;
+	calculateMovement(images[0], images[2], K[0], K[2], movement_R[1],
+			movement_t[1], P, P1, points_world);
+	cout << "R: " << "\n" << movement_R[1] << endl;
+	cout << "t: " << "\n" << movement_t[1] << endl;
 
 	cout << "Pareja de imágenes: 001 y 004:" << endl;
-	calculateMovement(images[1], images[2], K[1], K[2], movement_R[2], movement_t[2]);
-	cout<<"R: "<<"\n"<<movement_R[2]<<endl;
-	cout<<"t: "<<"\n"<<movement_t[2]<<endl;
+	calculateMovement(images[1], images[2], K[1], K[2], movement_R[2],
+			movement_t[2], P, P1, points_world);
+	cout << "R: " << "\n" << movement_R[2] << endl;
+	cout << "t: " << "\n" << movement_t[2] << endl;
 }
 
 /**
@@ -198,5 +204,15 @@ void ejercicio3(vector<Mat> images)
 void ejercicio4(vector<Mat> images)
 {
 	cout << "Ejercicio 4:" << endl;
+	vector<Mat> K(3), radial(3), R(3), t(3);
+	readData("imagenes/reconstruccion/rdimage.000.ppm.camera", K[0], radial[0],
+			R[0], t[0]);
+	readData("imagenes/reconstruccion/rdimage.001.ppm.camera", K[1], radial[1],
+			R[1], t[1]);
+	readData("imagenes/reconstruccion/rdimage.004.ppm.camera", K[2], radial[2],
+			R[2], t[2]);
 
+	vector<Mat> images_output;
+	reconstruction3D(images, K, images_output);
+	//pintaMI(images_output);
 }

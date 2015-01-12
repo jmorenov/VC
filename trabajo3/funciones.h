@@ -43,7 +43,13 @@ double verifyF(Mat &lines1, Mat &lines2, vector<Point2f> &points1, vector<Point2
 
 double distance_to_line( Point begin, Point end, Point x);
 
-void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1, Mat &output_R, Mat &output_t);
+Mat calculateE(Mat &image0, Mat &image1, vector<Point2f> &pts1, vector<Point2f> &pts2, Mat &K0,
+		Mat &K1, unsigned int n_points);
+
+void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1,
+		Mat &output_R, Mat &output_t, Mat &output_P, Mat &output_P1, Mat &output_points_world);
+
+void reconstruction3D(vector<Mat> &images, vector<Mat> &K, vector<Mat> &output_images);
 
 void drawKeyPoints(const Mat &img, const vector<KeyPoint> &keypoints);
 
