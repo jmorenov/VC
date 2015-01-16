@@ -31,6 +31,10 @@ using namespace cv;
 /**
  * Funciones Trabajo 3.
  */
+
+/**
+ * Genera P a partir de números aleatorios.
+ */
 Mat generateP()
 {
 
@@ -46,6 +50,9 @@ Mat generateP()
 	return P;
 }
 
+/**
+ * Calcula las coordenadas de la cámara.
+ */
 Mat calculateCoordCam(Mat &P)
 {
 	Mat M = P(Rect(0, 0, 3, 3));
@@ -54,12 +61,18 @@ Mat calculateCoordCam(Mat &P)
 	return C;
 }
 
+/**
+ * Calcula K, R y T a partir de P.
+ */
 void calculateKRT(Mat &P, Mat &K, Mat &R, Mat &T)
 {
 	decomposeProjectionMatrix(P, K, R, T);
 	T = K.inv() * P(Rect(3, 0, 1, 3));
 }
 
+/**
+ * Verifica K, R y T generando P.
+ */
 double verifyKRT(Mat &P, Mat &K, Mat &R, Mat &T)
 {
 	Mat _P;
@@ -69,6 +82,9 @@ double verifyKRT(Mat &P, Mat &K, Mat &R, Mat &T)
 	return calculateECM(P, _P);
 }
 
+/**
+ * Calcula el error mínimo cuadrático.
+ */
 double calculateECM(Mat &P, Mat &_P)
 {
 	double ECM = 0.0;
@@ -80,6 +96,9 @@ double calculateECM(Mat &P, Mat &_P)
 	return ECM;
 }
 
+/**
+ * Dibuja la línea epipolares.
+ */
 Mat drawEpipolarLines(Mat &image1, vector<Point2f> &points1, Mat &F,
 		int whichImage)
 {
@@ -107,6 +126,9 @@ Mat drawEpipolarLines(Mat &image1, vector<Point2f> &points1, Mat &F,
 	return lines;
 }
 
+/**
+ * Calcula la matriz fundamental.
+ */
 Mat calculateF(Mat &image0, Mat &image1, vector<Point2f> &pts1,
 		vector<Point2f> &pts2, unsigned int n_points, bool sort_matches)
 {
@@ -119,11 +141,13 @@ Mat calculateF(Mat &image0, Mat &image1, vector<Point2f> &pts1,
 		pts1.push_back(keypoints1[matches[i].queryIdx].pt);
 		pts2.push_back(keypoints2[matches[i].trainIdx].pt);
 	}
-	Mat F = findFundamentalMat(pts1, pts2, CV_FM_RANSAC);
+	Mat F = findFundamentalMat(pts1, pts2, CV_FM_8POINT+CV_FM_RANSAC);
 	return F;
 }
 
-// MAL
+/**
+ * Verifica F devolviendo el error.
+ */
 double verifyF(Mat &lines1, Mat &lines2, vector<Point2f> &points1,
 		vector<Point2f> &points2)
 {
@@ -146,17 +170,20 @@ double verifyF(Mat &lines1, Mat &lines2, vector<Point2f> &points1,
 	return (error1 + error2) / 2;
 }
 
+/**
+ * Calcula la distancia entre dos puntos que forman una linea a un punto.
+ */
 double distance_to_line(Point begin, Point end, Point x)
 {
-	//translate the begin to the origin
 	end -= begin;
 	x -= begin;
-
-	//¿do you see the triangle?
 	double area = x.cross(end);
 	return area / norm(end);
 }
 
+/**
+ * Calcula la matriz esencial.
+ */
 Mat calculateE(Mat &image0, Mat &image1, vector<Point2f> &pts1,
 		vector<Point2f> &pts2, Mat &K0, Mat &K1, unsigned int n_points)
 {
@@ -165,6 +192,9 @@ Mat calculateE(Mat &image0, Mat &image1, vector<Point2f> &pts1,
 	return E;
 }
 
+/**
+ * Calcula el movimiento de la cámara asociado a una pareja de imágenes.
+ */
 void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1,
 		Mat &output_R, Mat &output_t, Mat &output_P, Mat &output_P1,
 		Mat &output_points_world)
@@ -252,52 +282,6 @@ void calculateMovement(Mat &image0, Mat &image1, Mat &K0, Mat &K1,
 		output_points_world = points_world[3].clone();
 		break;
 	}
-}
-
-void reconstruction3D(vector<Mat> &images, vector<Mat> &K,
-		vector<Mat> &output_images)
-{
-	vector<Mat> E(3);
-	vector<vector<Point2f> > pts1(3), pts2(3);
-	vector<Mat> R(3), t(3), P(3), P1(3), points_world(3);
-	output_images = vector<Mat>(3);
-
-	Mat F = calculateF(images[0], images[1], pts1[0], pts2[0], 200);
-	calculateMovement(images[0], images[1], K[0], K[1], R[0], t[0], P[0], P1[0],
-			points_world[0]);
-	for (int i = 0; i < points_world[0].cols && i < 200; i++)
-	{
-		circle(images[0], pts1[0][i], 5, Scalar(0, 0, 255));
-		circle(images[1], pts2[0][i], 5, Scalar(0, 0, 255));
-	}
-	output_images[0] = Mat(images[0].cols / 2, images[0].rows / 2,
-			images[0].type(), images[0].channels());
-	resize(images[0].t(), output_images[0], output_images[0].size());
-
-
-	Mat F = calculateF(images[0], images[2], pts1[1], pts2[1], 200);
-	calculateMovement(images[0], images[2], K[0], K[2], R[0], t[0], P[1], P1[1],
-			points_world[1]);
-	for (int i = 0; i < points_world[1].cols && i < 200; i++)
-	{
-		circle(images[0], pts1[1][i], 5, Scalar(0, 0, 255));
-	}
-	output_images[0] = Mat(images[0].cols / 2, images[0].rows / 2,
-			images[0].type(), images[0].channels());
-	resize(images[0].t(), output_images[0], output_images[0].size());
-
-
-	Mat F = calculateF(images[0], images[1], pts1[0], pts2[0], 200);
-	calculateMovement(images[0], images[1], K[0], K[1], R[0], t[0], P[0], P1[0],
-			points_world[0]);
-	for (int i = 0; i < points_world[0].cols && i < 200; i++)
-	{
-		circle(images[0], pts1[0][i], 5, Scalar(0, 0, 255));
-	}
-	output_images[0] = Mat(images[0].cols / 2, images[0].rows / 2,
-			images[0].type(), images[0].channels());
-	resize(images[0].t(), output_images[0], output_images[0].size());
-
 }
 
 /**

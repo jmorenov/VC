@@ -25,7 +25,6 @@ void computeLine(string line_s, vector<double> &output);
 void ejercicio1(vector<Mat> images);
 void ejercicio2(vector<Mat> images);
 void ejercicio3(vector<Mat> images);
-void ejercicio4(vector<Mat> images);
 
 int main(int argc, char* argv[])
 {
@@ -34,18 +33,17 @@ int main(int argc, char* argv[])
 	vector<string> imgs, imgs_reconstruccion;
 	imgs.push_back("imagenes/Vmort1.pgm");
 	imgs.push_back("imagenes/Vmort2.pgm");
-	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.000.ppm");
-	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.001.ppm");
-	imgs_reconstruccion.push_back("imagenes/reconstruccion/rdimage.004.ppm");
+	imgs_reconstruccion.push_back("imagenes/rdimage.000.ppm");
+	imgs_reconstruccion.push_back("imagenes/rdimage.001.ppm");
+	imgs_reconstruccion.push_back("imagenes/rdimage.004.ppm");
 	vector<Mat> images(imgs.size()), images_reconstruccion(
 			imgs_reconstruccion.size());
 	readImages(imgs, images);
 	readImages(imgs_reconstruccion, images_reconstruccion);
 
-	//ejercicio1(images);
-	//ejercicio2(images);
-	//ejercicio3(images_reconstruccion);
-	ejercicio4(images_reconstruccion);
+	ejercicio1(images);
+	ejercicio2(images);
+	ejercicio3(images_reconstruccion);
 
 	cout << "Fin Trabajo 3." << endl;
 	return 0;
@@ -62,6 +60,9 @@ void readImages(const vector<string> &imgs, vector<Mat> &images)
 	cout << "Finalizada lectura de imágenes." << endl;
 }
 
+/**
+ * Lectura de datos.
+ */
 bool readData(const string file_input, Mat &K, Mat &radial_distorsion, Mat &R,
 		Mat &t)
 {
@@ -114,6 +115,9 @@ bool readData(const string file_input, Mat &K, Mat &radial_distorsion, Mat &R,
 	return false;
 }
 
+/**
+ * Convierte una línea del archivo en un vector de números.
+ */
 void computeLine(string line_s, vector<double> &output)
 {
 	output.clear();
@@ -169,11 +173,11 @@ void ejercicio3(vector<Mat> images)
 {
 	cout << "Ejercicio 3:" << endl;
 	vector<Mat> K(3), radial(3), R(3), t(3);
-	readData("imagenes/reconstruccion/rdimage.000.ppm.camera", K[0], radial[0],
+	readData("imagenes/rdimage.000.ppm.camera", K[0], radial[0],
 			R[0], t[0]);
-	readData("imagenes/reconstruccion/rdimage.001.ppm.camera", K[1], radial[1],
+	readData("imagenes/rdimage.001.ppm.camera", K[1], radial[1],
 			R[1], t[1]);
-	readData("imagenes/reconstruccion/rdimage.004.ppm.camera", K[2], radial[2],
+	readData("imagenes/rdimage.004.ppm.camera", K[2], radial[2],
 			R[2], t[2]);
 
 	vector<Mat> movement_R(3), movement_t(3);
@@ -196,23 +200,4 @@ void ejercicio3(vector<Mat> images)
 			movement_t[2], P, P1, points_world);
 	cout << "R: " << "\n" << movement_R[2] << endl;
 	cout << "t: " << "\n" << movement_t[2] << endl;
-}
-
-/**
- * Ejercicio 4
- */
-void ejercicio4(vector<Mat> images)
-{
-	cout << "Ejercicio 4:" << endl;
-	vector<Mat> K(3), radial(3), R(3), t(3);
-	readData("imagenes/reconstruccion/rdimage.000.ppm.camera", K[0], radial[0],
-			R[0], t[0]);
-	readData("imagenes/reconstruccion/rdimage.001.ppm.camera", K[1], radial[1],
-			R[1], t[1]);
-	readData("imagenes/reconstruccion/rdimage.004.ppm.camera", K[2], radial[2],
-			R[2], t[2]);
-
-	vector<Mat> images_output;
-	reconstruction3D(images, K, images_output);
-	//pintaMI(images_output);
 }
